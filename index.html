@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>基金每日申购追踪 · 净值图生成器</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{--navy:#22315a;--navy2:#1b284a;--up:#c62f2f;--down:#2f9e6b;--ink:#1f2937;--muted:#8a94a6;--line:#e8ebf1;--bar:#6f8fc7;--badge:#d94a4a;--gold:#cda24f;}
+  *{box-sizing:border-box}
+  body{margin:0;background:#eef1f6;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;color:var(--ink);padding:28px}
+  .wrap{max-width:1040px;margin:0 auto}
+  .panel{background:#fff;border:1px solid #e7eaf1;border-radius:16px;margin-bottom:22px;box-shadow:0 8px 26px rgba(20,30,60,.08);overflow:hidden}
+  .ptop{height:3px;background:linear-gradient(90deg,var(--gold),#b98f3e 55%,#8f6e2f)}
+  .phead{background:linear-gradient(135deg,#26365a,#19233d);color:#fff;padding:17px 24px;display:flex;justify-content:space-between;align-items:center}
+  .phead h2{margin:0;font-size:16.5px;font-weight:700;letter-spacing:.3px}
+  .phead .tag{font-size:11px;color:var(--gold);letter-spacing:3px;font-weight:600}
+  .pbody{padding:20px 24px 22px}
+  .sub{font-size:12.5px;color:var(--muted);margin-bottom:15px;line-height:1.65}
+  .plabel{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--navy2);margin:2px 0 12px}
+  .plabel .bar{width:3px;height:14px;background:var(--gold);border-radius:2px}
+  .plabel .cnt{font-weight:500;color:var(--muted);font-size:12px}
+  .idxtip{font-size:11.5px;color:#6a7488;margin:0 0 15px;padding:8px 12px;background:#f6f8fc;border:1px solid #eef1f6;border-radius:9px}
+  .rhead{display:flex;gap:8px;font-size:11px;color:#98a1b2;margin:0 0 7px 2px;letter-spacing:.3px}
+  .rhead span:nth-child(1){flex:2;min-width:150px}.rhead span:nth-child(2){flex:1.3;min-width:130px}.rhead span:nth-child(3){width:36px}
+  .fund-row{display:flex;gap:8px;align-items:center;margin-bottom:9px}
+  .ac-wrap{position:relative;flex:2;min-width:150px}
+  .ac-wrap .code{width:100%;height:40px;padding:0 12px;border:1px solid #d7dce6;border-radius:9px;font-size:14px;color:var(--ink);background:#fff;transition:border-color .15s,box-shadow .15s}
+  .ac-wrap .code:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(34,49,90,.1)}
+  .ac-name{font-size:11px;color:#5b6577;margin-top:3px;min-height:13px;padding-left:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ac-list{position:absolute;z-index:30;left:0;right:0;top:44px;background:#fff;border:1px solid #e2e6ee;border-radius:10px;box-shadow:0 14px 30px rgba(20,30,60,.16);max-height:250px;overflow:auto;display:none;padding:4px}
+  .ac-item{padding:9px 11px;font-size:13px;cursor:pointer;border-radius:7px}
+  .ac-item:hover,.ac-item.on{background:#eef2fb}
+  .ac-item b{color:var(--navy)} .ac-item .t{color:var(--muted);font-size:11px;margin-left:6px}
+  .fund-row .start{flex:1.3;min-width:130px;height:40px;padding:0 10px;border:1px solid #d7dce6;border-radius:9px;font-size:13px;color:var(--ink);background:#fff;transition:border-color .15s,box-shadow .15s}
+  .fund-row .start:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(34,49,90,.1)}
+  .fund-row .del{background:#f4f6fa;color:#aab2c2;border:1px solid #e6eaf1;border-radius:9px;width:36px;height:40px;font-size:17px;cursor:pointer;flex:none;transition:.15s}
+  .fund-row .del:hover{background:#fdecec;color:var(--up);border-color:#f3d4d4}
+  .add{background:#f4f7fd;color:var(--navy);border:1px dashed #bcc9e6;border-radius:9px;padding:11px;width:100%;font-size:13px;font-weight:600;cursor:pointer;margin-top:5px;transition:.15s}
+  .add:hover{background:#eaf0fb;border-color:#9fb2df}
+  .btns{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}
+  button.act{border:1px solid transparent;border-radius:9px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
+  #batch{background:var(--navy);color:#fff;flex:1;min-width:170px}
+  #batch:hover{background:#1a2846}
+  #preview{background:#fff;color:var(--navy);border-color:#c6d0e4}
+  #preview:hover{background:#f4f7fd}
+  #png{background:#fff;color:#a9812f;border-color:#e4cf9c}
+  #png:hover{background:#fbf6ea}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .status{margin-top:14px;font-size:13px;min-height:18px}.status.err{color:var(--up)}.status.ok{color:var(--down)}
+  .note{margin-top:14px;font-size:11.5px;color:var(--muted);line-height:1.75;border-top:1px dashed var(--line);padding-top:13px}
+
+  #card{width:1000px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 12px 38px rgba(20,30,60,.13),0 2px 8px rgba(20,30,60,.06);margin:0 auto;border:1px solid #eef1f6}
+  #card *{font-variant-numeric:tabular-nums}
+  .topbar{height:4px;background:linear-gradient(90deg,var(--gold),#b98f3e 55%,#8f6e2f)}
+  .head{background:linear-gradient(135deg,#26365a 0%,#19233d 100%);color:#fff;padding:30px 40px 26px;display:flex;justify-content:space-between;align-items:flex-start}
+  .head .name{font-size:26px;font-weight:800;letter-spacing:.3px;display:flex;align-items:center;gap:13px;flex-wrap:wrap;line-height:1.25}
+  .code{background:#fff;color:var(--navy2);font-size:14px;font-weight:700;border-radius:5px;padding:3px 11px;letter-spacing:1px;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+  .subtype{margin-top:12px;font-size:13.5px;color:#9db0d2;letter-spacing:.4px}
+  .head .right{text-align:right;white-space:nowrap}
+  .track{color:var(--gold);font-size:16px;font-weight:700;letter-spacing:4px}
+  .trackdate{color:#b9c4dc;font-size:13.5px;margin-top:10px;letter-spacing:.4px}
+  .kpis{display:flex;padding:26px 22px;border-bottom:1px solid var(--line)}
+  .kpi{flex:1;text-align:center;padding:2px 16px}
+  .kpi+.kpi{border-left:1px solid var(--line)}
+  .kpi .lab{font-size:12.5px;color:var(--muted);margin-bottom:13px;letter-spacing:2px}
+  .kpi .big{font-size:37px;font-weight:800;color:var(--navy2);line-height:1}
+  .chg{display:inline-block;color:#fff;font-size:22px;font-weight:800;border-radius:9px;padding:9px 22px;line-height:1}
+  .feewrap{display:flex;gap:24px;padding:6px 40px 4px}
+  .feebox{flex:1}
+  .feeh{text-align:center;font-size:14px;font-weight:700;color:var(--navy2);margin-bottom:9px;letter-spacing:1px}
+  .feetb{width:100%;border-collapse:collapse;font-size:12.5px;border:1px solid #eef1f6;border-radius:8px;overflow:hidden}
+  .feetb td{border:1px solid #eef1f6;padding:8px 10px;color:#4b5568}
+  .feetb td.k{background:#f6f8fc;text-align:center}
+  .feetb td.v{text-align:center;width:42%;font-weight:700;color:var(--navy2)}
+  .feenote{padding:5px 40px 12px;font-size:11px;color:#aab2c2}
+  .sec{padding:22px 40px}
+  .sec-t{display:flex;align-items:center;gap:11px;margin-bottom:18px}
+  .sec-t .bar{width:4px;height:17px;background:var(--gold);border-radius:2px}
+  .sec-t b{font-size:18px;color:var(--navy2);letter-spacing:.5px}.sec-t span{font-size:12.5px;color:var(--muted)}
+  .sec-t .rule{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .ranges{display:flex;gap:12px;text-align:center}
+  .ranges .r{flex:1;background:#f7f9fc;border:1px solid #eef1f6;border-radius:10px;padding:15px 6px}
+  .ranges .rl{font-size:13px;color:#6b7688;margin-bottom:10px;letter-spacing:1px}
+  .ranges .rv{font-size:22px;font-weight:800;margin-bottom:6px;line-height:1}
+  .ranges .ra{font-size:11.5px;color:#9aa3b5}.ranges .ra .an{font-weight:700}
+  .up{color:var(--up)}.down{color:var(--down)}.bg-up{background:var(--up)}.bg-down{background:var(--down)}
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  thead th{background:linear-gradient(180deg,#243352,#1b284a);color:#eaf0fb;font-weight:600;padding:14px 10px;text-align:center;font-size:13.5px;letter-spacing:.5px}
+  thead th:first-child{border-top-left-radius:8px}thead th:last-child{border-top-right-radius:8px}
+  tbody td{padding:13px 10px;text-align:center;border-bottom:1px solid #eef1f6;color:#3b4763}
+  tbody tr:nth-child(even) td{background:#fafbfd}
+  tbody td.strong{font-weight:800}
+  .annual{display:flex;align-items:center;gap:11px;justify-content:flex-end;padding-right:16px}
+  .annual .v{min-width:70px;text-align:right}
+  .annual .track2{width:88px;height:8px;background:#eef1f6;border-radius:4px;overflow:hidden;flex:none}
+  .annual .fill{display:block;height:100%;border-radius:4px}
+  .foot{padding:16px 40px 8px;font-size:11.5px;color:#9aa3b5;line-height:1.85}
+  .warn{margin:6px 40px 30px;background:#fdf2f2;border:1px solid #f6dede;border-left:4px solid var(--badge);border-radius:8px;padding:13px 18px;font-size:12.5px;color:#8a4141}
+  .empty{padding:70px 34px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="panel">
+    <div class="ptop"></div>
+    <div class="phead"><h2>基金每日申购追踪 · 净值图生成器</h2><span class="tag">NAV DAILY</span></div>
+    <div class="pbody">
+      <div class="sub">每只基金单独设置申购起始日期；终点固定为最新净值。申购日 = 起始日 → 最新净值日 之间每个交易日。配置自动保存在本地。</div>
+      <div id="idxtip" class="idxtip">正在加载基金检索库（用于代码联想 / 类型识别）…</div>
+      <div class="plabel"><span class="bar"></span>基金列表 <span class="cnt" id="fcnt"></span></div>
+      <div class="rhead"><span>基金代码（输入可联想名称）</span><span>申购起始日期</span><span></span></div>
+      <div id="fundlist"></div>
+      <button class="add" id="add">＋ 添加基金</button>
+      <div class="btns">
+        <button class="act" id="batch">批量导出全部 PNG</button>
+        <button class="act" id="preview">预览首只</button>
+        <button class="act" id="png" disabled>导出当前 PNG</button>
+      </div>
+      <div id="status" class="status"></div>
+      <div class="note">数据来源：天天基金公开接口（浏览器内脚本加载，需联网）。区间年化＝(1+区间收益)^(365/天数)−1（复利）；每日申购年化＝申购收益率×365/持有天数（单利）。红涨绿跌。费率分档表（申购/赎回）已按各产品预置在文件顶部的 FEE_DATA 配置中，如需修改直接编辑该处即可，全部产品同步生效。</div>
+    </div>
+  </div>
+
+  <div id="card"><div class="empty">添加基金代码后点击「预览首只」</div></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const cache={};                 // code -> {NAV,AC,FNAME,FCODE,rate,srcRate}
+const CFG_KEY='fundTrackerCfg', CFG_VER_KEY='fundTrackerVer', CFG_VER='v2-14funds';
+const DEFAULT_FUNDS=['004063','001011','007667','013402','018345','023885','010281','000071','007592','008585','001016','015717','025542','016708'];
+
+/* ★★★ 费率分档表（申购按金额档 / 赎回按持有期档）★★★
+   来源：天天基金/华夏基金公开费率，部分按华夏同类产品标准结构预填，标 * 者建议对合同核对后修正。
+   修改方法：直接改下面对应代码的 buy / redeem 两个数组即可，格式 [档位说明, 费率]。 */
+const FEE_DATA={
+  // —— A类 ——
+  '004063':{buy:[['M<100万元','0.80%'],['100万元≤M<500万元','0.40%'],['M≥500万元','1000元/笔']],redeem:[['T<7日','1.50%'],['7日≤T<30日','0.10%'],['T≥30日','0.00%']],note:'华夏恒融债券A｜费率以基金合同为准（*待核对）'},
+  '001011':{buy:[['M<100万元','1.00%'],['100万元≤M<500万元','0.50%'],['M≥500万元','1000元/笔']],redeem:[['T<7日','1.50%'],['7日≤T<60日','0.10%'],['T≥60日','0.00%']],note:'华夏希望债券A｜费率以基金合同为准（*待核对）'},
+  '007592':{buy:[['M<100万元','1.50%'],['100万元≤M<500万元','1.00%'],['M≥500万元','1000元/笔']],redeem:[['T<7日','1.50%'],['7日≤T<30日','0.75%'],['30日≤T<1年','0.50%'],['T≥1年','0.00%']],note:'华夏价值精选混合A｜费率以基金合同为准'},
+  '000071':{buy:[['M<100万元','1.20%'],['100万元≤M<500万元','0.90%'],['M≥500万元','1000元/笔']],redeem:[['T<7日','1.50%'],['T≥7日','0.50%']],note:'华夏恒生ETF联接A｜费率以基金合同为准'},
+  '008585':{buy:[['M<100万元','1.20%'],['100万元≤M<500万元','0.80%'],['M≥500万元','1000元/笔']],redeem:[['T<7日','1.50%'],['T≥7日','0.00%']],note:'华夏中证人工智能主题ETF联接A｜费率以基金合同为准（*待核对）'},
+  '010281':{buy:[['M<100万元','0.60%'],['100万元≤M<500万元','0.30%'],['M≥500万元','1000元/笔']],redeem:[['持有期（1年）内不可赎回','—'],['锁定期满赎回','0.00%']],note:'华夏保守养老一年持有混合(FOF)A｜设1年最短持有期（*申购档待核对）'},
+  // —— C类（免申购费，另收销售服务费）——
+  '007667':{buy:[['—','0.00%（免申购费）']],redeem:[['T<7日','1.50%'],['T≥7日','0.00%']],note:'华夏鼎泓债券C｜C类免申购费、另收销售服务费（*待核对）'},
+  '013402':{buy:[['—','0.00%（免申购费）']],redeem:[['T<7日','1.50%'],['T≥7日','0.00%']],note:'华夏恒生科技ETF发起式联接C｜C类免申购费、另收销售服务费'},
+  '018345':{buy:[['—','0.00%（免申购费）']],redeem:[['T<7日','1.50%'],['T≥7日','0.00%']],note:'华夏中证机器人ETF联接C｜C类免申购费、另收销售服务费'},
+  '023885':{buy:[['—','0.00%（免申购费）']],redeem:[['T<7日','1.50%'],['T≥7日','0.00%']],note:'华夏中证金融科技主题ETF联接C｜C类免申购费、另收销售服务费'},
+  '001016':{buy:[['—','0.00%（免申购费）']],redeem:[['T<7日','1.50%'],['T≥7日','0.00%']],note:'华夏沪深300指数增强C｜C类免申购费、另收销售服务费'},
+  '015717':{buy:[['—','0.00%（免申购费）']],redeem:[['T<7日','1.50%'],['T≥7日','0.00%']],note:'华夏稳享增利C｜C类免申购费、另收销售服务费（*待核对）'},
+  '025542':{buy:[['—','0.00%（免申购费）']],redeem:[['T<7日','1.50%'],['T≥7日','0.00%']],note:'华夏行业景气混合C｜C类免申购费、另收销售服务费'},
+  '016708':{buy:[['—','0.00%（免申购费）']],redeem:[['T<7日','1.50%'],['T≥7日','0.00%']],note:'华夏有色金属ETF联接C｜C类免申购费、另收销售服务费'}
+};
+function feeTablesHTML(m){
+  const mk=rows=>rows.map(r=>`<tr><td class="k">${r[0]}</td><td class="v">${r[1]}</td></tr>`).join('');
+  const d=FEE_DATA[m.FCODE];
+  if(d){
+    return `<div class="feewrap">
+      <div class="feebox"><div class="feeh">申购费率</div><table class="feetb">${mk(d.buy)}</table></div>
+      <div class="feebox"><div class="feeh">赎回费率</div><table class="feetb">${mk(d.redeem)}</table></div>
+    </div>${d.note?`<div class="feenote">${d.note}</div>`:''}`;
+  }
+  const rd=m.redeem?m.redeem:'详见基金合同';
+  return `<div class="feewrap">
+    <div class="feebox"><div class="feeh">申购费率</div><table class="feetb"><tr><td class="k">费率</td><td class="v">${m.buyFee}${m.srcFee?'（原'+m.srcFee+'）':''}</td></tr></table></div>
+    <div class="feebox"><div class="feeh">赎回费率</div><table class="feetb"><tr><td class="k">费率</td><td class="v">${rd}</td></tr></table></div>
+  </div>`;
+}
+let previewCode=null, IDX=null;   // IDX: Map code->[code,py,name,type]
+
+const WD=['日','一','二','三','四','五','六'];
+const fmtDate=t=>{const d=new Date(t);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+const cnWeek=t=>`（周${WD[new Date(t).getDay()]}）`;
+const pct=(v,d=2)=>(v>=0?'+':'')+(v*100).toFixed(d)+'%';
+const cls=v=>v>=0?'up':'down';const bgcls=v=>v>=0?'bg-up':'bg-down';
+const pctBig=v=>{const s=v*100,sign=s>=0?'+':'-',a=Math.abs(s);const r=a>=1000?Math.round(a).toLocaleString('en-US'):a.toFixed(2);return sign+r+'%';};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+// ===== 基金检索库（代码->名称/类型，支持联想）=====
+function loadIndex(){
+  return new Promise(res=>{
+    const s=document.createElement('script');
+    s.src='https://fund.eastmoney.com/js/fundcode_search.js';
+    s.onload=()=>{
+      IDX=new Map(); (window.r||[]).forEach(a=>IDX.set(a[0],a));
+      $('#idxtip').textContent=`基金检索库就绪（${IDX.size} 只），输入代码即可联想名称。`;
+      res(true);
+    };
+    s.onerror=()=>{ IDX=new Map(); $('#idxtip').textContent='基金检索库加载失败（不影响生成，但无法联想/自动带出类型）。'; res(false); };
+    document.body.appendChild(s);
+  });
+}
+const nameOf=c=>IDX&&IDX.get(c)?IDX.get(c)[2]:'';
+const typeOf=c=>IDX&&IDX.get(c)?IDX.get(c)[3]:'';
+function suggest(q){
+  if(!IDX) return []; q=q.trim().toLowerCase(); if(!q) return [];
+  const out=[];
+  for(const a of IDX.values()){
+    if(a[0].startsWith(q)||(a[2]&&a[2].toLowerCase().includes(q))||(a[1]&&a[1].toLowerCase().includes(q))){
+      out.push(a); if(out.length>=8) break;
+    }
+  }
+  return out;
+}
+
+// ===== 基金列表 UI =====
+function saveCfg(){
+  const rows=$$('#fundlist .fund-row').map(r=>({
+    code:r.querySelector('.code').value.trim(),
+    start:r.querySelector('.start').value
+  }));
+  try{localStorage.setItem(CFG_KEY,JSON.stringify(rows));}catch(e){}
+}
+function loadCfg(){ try{return JSON.parse(localStorage.getItem(CFG_KEY))||null}catch(e){return null} }
+
+function addRow(cfg={code:'',start:'',redeem:''}){
+  const div=document.createElement('div'); div.className='fund-row';
+  div.innerHTML=`
+    <div class="ac-wrap">
+      <input class="code" maxlength="6" placeholder="6位基金代码" value="${cfg.code||''}">
+      <div class="ac-name"></div>
+      <div class="ac-list"></div>
+    </div>
+    <input class="start" type="date" value="${cfg.start||''}" title="申购起始日期">
+    <button class="del" title="删除">×</button>`;
+  const code=div.querySelector('.code'), nm=div.querySelector('.ac-name'), list=div.querySelector('.ac-list');
+  const showName=()=>{ const n=nameOf(code.value.trim()); nm.textContent=n?('✓ '+n):''; };
+  showName();
+  code.addEventListener('input',()=>{
+    saveCfg(); showName();
+    const items=suggest(code.value);
+    if(!items.length){ list.style.display='none'; return; }
+    list.innerHTML=items.map(a=>`<div class="ac-item" data-c="${a[0]}"><b>${a[0]}</b> ${a[2]}<span class="t">${a[3]||''}</span></div>`).join('');
+    list.style.display='block';
+    list.querySelectorAll('.ac-item').forEach(it=>it.onclick=()=>{ code.value=it.dataset.c; list.style.display='none'; showName(); saveCfg(); });
+  });
+  code.addEventListener('blur',()=>setTimeout(()=>list.style.display='none',180));
+  div.querySelector('.start').onchange=saveCfg;
+  div.querySelector('.del').onclick=()=>{ div.remove(); if(!$$('#fundlist .fund-row').length) addRow(); saveCfg(); updCnt(); };
+  $('#fundlist').appendChild(div); updCnt();
+}
+function updCnt(){const el=$('#fcnt');if(el)el.textContent='共 '+$$('#fundlist .fund-row').length+' 只';}
+function initRows(){
+  let cfg=loadCfg();
+  let ver=null; try{ver=localStorage.getItem(CFG_VER_KEY);}catch(e){}
+  if(ver!==CFG_VER){ cfg=null; try{localStorage.setItem(CFG_VER_KEY,CFG_VER);}catch(e){} }  // 默认清单升级后覆盖旧缓存
+  if(cfg&&cfg.length) cfg.forEach(addRow);
+  else { DEFAULT_FUNDS.forEach(c=>addRow({code:c})); saveCfg(); }
+}
+$('#add').onclick=()=>{ addRow(); };
+
+// ===== 数据加载 =====
+function loadFund(code){
+  if(cache[code]) return Promise.resolve(cache[code]);
+  return new Promise((res,rej)=>{
+    try{window.Data_netWorthTrend=window.Data_ACWorthTrend=window.fS_name=window.fS_code=window.fund_Rate=window.fund_sourceRate=undefined;}catch(e){}
+    const s=document.createElement('script');
+    s.src=`https://fund.eastmoney.com/pingzhongdata/${code}.js?v=${Date.now()}`;
+    s.onload=()=>{
+      if(!window.Data_netWorthTrend||!window.Data_netWorthTrend.length){rej(`基金 ${code} 未取到净值`);return;}
+      const d={
+        NAV:window.Data_netWorthTrend.map(o=>({x:o.x,y:+o.y,e:(o.equityReturn===''||o.equityReturn==null)?null:+o.equityReturn})),
+        AC:(window.Data_ACWorthTrend||[]).map(a=>[a[0],+a[1]]),
+        FNAME:window.fS_name||nameOf(code)||'', FCODE:window.fS_code||code,
+        rate:(window.fund_Rate!==undefined?window.fund_Rate:''), srcRate:(window.fund_sourceRate!==undefined?window.fund_sourceRate:'')
+      };
+      cache[code]=d; res(d);
+    };
+    s.onerror=()=>rej(`基金 ${code} 加载失败（网络/代码错误）`);
+    document.body.appendChild(s);
+  });
+}
+
+function acOnOrBefore(AC,t){let v=null;for(const r of AC){if(r[0]<=t)v=r[1];else break;}return v;}
+function idxOnOrBefore(NAV,t){let lo=-1;for(let i=0;i<NAV.length;i++){if(NAV[i].x<=t)lo=i;else break;}return lo;}
+function rangeReturn(NAV,i,off){
+  const tg=new Date(NAV[i].x);tg.setDate(tg.getDate()-off);
+  const j=idxOnOrBefore(NAV,tg.getTime());if(j<0)return null;
+  const r=NAV[i].y/NAV[j].y-1,days=Math.max(1,Math.round((NAV[i].x-NAV[j].x)/86400000));
+  return {r,ann:Math.pow(1+r,365/days)-1};
+}
+function fmtFee(rate,src){
+  const clean=x=>{ if(x===''||x==null) return null; const n=parseFloat(x); return isNaN(n)?null:n; };
+  const r=clean(rate), s=clean(src);
+  if(r==null) return {buy:'--',src:''};
+  const buy=(r===0)?'0.00%（免申购费）':r.toFixed(2)+'%';
+  const showSrc=(s!=null&&s>r)?s.toFixed(2)+'%':'';
+  return {buy,src:showSrc};
+}
+
+function computeModel(d,startStr,redeem){
+  const NAV=d.NAV,L=NAV.length-1,cur=NAV[L],nav=cur.y;
+  const dayChg=cur.e!=null?cur.e/100:(L>0?nav/NAV[L-1].y-1:0);
+  const acv=acOnOrBefore(d.AC,cur.x),acnav=acv!=null?acv:nav;
+  const ranges=[['近一周',7],['近一月',30],['近三月',91],['近六月',182],['近一年',365]]
+    .map(([l,dd])=>({l,...(rangeReturn(NAV,L,dd)||{r:null,ann:null})}));
+  let startT;
+  if(startStr){ startT=new Date(startStr+'T00:00:00').getTime(); }
+  else { startT=NAV[Math.max(0,L-5)].x; }             // 默认约5个交易日前
+  if(startT<NAV[0].x) startT=NAV[0].x;
+  const subs=[];
+  for(let k=0;k<L;k++){
+    if(NAV[k].x<startT) continue;
+    const s=NAV[k],held=Math.max(1,Math.round((cur.x-s.x)/86400000));
+    const dchg=s.e!=null?s.e/100:(k>0?s.y/NAV[k-1].y-1:0);
+    const ret=nav/s.y-1;
+    subs.push({date:s.x,sn:s.y,held,dchg,ret,ann:ret*365/held});
+  }
+  const maxAbs=Math.max(...subs.map(x=>Math.abs(x.ann)),1e-9);
+  const fee=fmtFee(d.rate,d.srcRate);
+  return {FNAME:d.FNAME,FCODE:d.FCODE,type:typeOf(d.FCODE),nav,dayChg,acnav,ranges,subs,maxAbs,
+          tdate:cur.x,buyFee:fee.buy,srcFee:fee.src,redeem:redeem||'',minD:fmtDate(NAV[0].x),maxD:fmtDate(NAV[L].x)};
+}
+
+function renderCard(m){
+  const rangeHTML=m.ranges.map(r=>r.r==null
+    ?`<div class="r"><div class="rl">${r.l}</div><div class="rv">--</div><div class="ra"></div></div>`
+    :`<div class="r"><div class="rl">${r.l}</div><div class="rv ${cls(r.r)}">${pct(r.r)}</div><div class="ra">年化 <span class="an ${cls(r.ann)}">${pctBig(r.ann)}</span></div></div>`).join('');
+  const rowsHTML=m.subs.length? m.subs.map(s=>{
+    const w=Math.max(6,Math.round(Math.abs(s.ann)/m.maxAbs*100));
+    return `<tr><td>${fmtDate(s.date)}</td><td>${s.sn.toFixed(4)}</td><td>${s.held}</td>
+      <td class="${cls(s.dchg)}">${pct(s.dchg)}</td><td class="strong ${cls(s.ret)}">${pct(s.ret)}</td>
+      <td><span class="annual"><span class="v ${cls(s.ann)}">${pctBig(s.ann)}</span><span class="track2"><span class="fill ${bgcls(s.ann)}" style="width:${w}%"></span></span></span></td></tr>`;
+  }).join('') : `<tr><td colspan="6" style="color:#9aa3b5">所选起始日期区间内暂无申购日，请把起始日期往前调</td></tr>`;
+  $('#card').innerHTML=`
+    <div class="topbar"></div>
+    <div class="head">
+      <div><div class="name">${m.FNAME} <span class="code">${m.FCODE}</span></div>${m.type?`<div class="subtype">${m.type}</div>`:''}</div>
+      <div class="right"><div class="track">每日申购追踪</div><div class="trackdate">${fmtDate(m.tdate)}${cnWeek(m.tdate)}</div></div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="lab">单位净值</div><div class="big">${m.nav.toFixed(4)}</div></div>
+      <div class="kpi"><div class="lab">日涨幅</div><div class="chg ${bgcls(m.dayChg)}">${pct(m.dayChg)}</div></div>
+      <div class="kpi"><div class="lab">累计净值</div><div class="big">${m.acnav.toFixed(4)}</div></div>
+    </div>
+    <div class="sec"><div class="sec-t"><span class="bar"></span><b>区间收益表现</b><span>（费前口径）</span><span class="rule"></span></div><div class="ranges">${rangeHTML}</div></div>
+    <div class="sec">
+      <div class="sec-t"><span class="bar"></span><b>每日申购客户收益测算</b><span>（按 ${fmtDate(m.tdate)} 净值 ${m.nav.toFixed(4)} 测算，共 ${m.subs.length} 个申购日）</span><span class="rule"></span></div>
+      <table><thead><tr><th>申购日期</th><th>申购日净值</th><th>持有天数</th><th>当日涨跌幅</th><th>费前收益率</th><th>费前折合年化收益率</th></tr></thead><tbody>${rowsHTML}</tbody></table>
+    </div>
+    <div class="sec" style="padding-bottom:4px"><div class="sec-t"><span class="bar"></span><b>费率结构</b><span class="rule"></span></div></div>
+    ${feeTablesHTML(m)}
+    <div class="foot">数据来源：天天基金网，截至 ${fmtDate(m.tdate)}；收益率为费前口径；年化收益率为模拟测算值（持有期收益率按 365 天折算，仅供参考），不代表未来表现。生成日期：${fmtDate(Date.now())}。</div>
+    <div class="warn">⚠ 风险提示：基金有风险，投资需谨慎。本材料不构成投资建议，基金过往业绩不预示其未来表现。</div>`;
+}
+
+function setStatus(t,c){const el=$('#status');el.textContent=t;el.className='status '+(c||'');}
+function rowsData(){ return $$('#fundlist .fund-row').map(r=>({code:r.querySelector('.code').value.trim(),start:r.querySelector('.start').value})).filter(x=>/^\d{6}$/.test(x.code)); }
+
+async function preview(){
+  const rows=rowsData(); if(!rows.length){setStatus('请至少填一个有效的6位基金代码','err');return;}
+  const {code,start}=rows[0]; setStatus('抓取中…','');
+  try{ const d=await loadFund(code); previewCode=code;
+    renderCard(computeModel(d,start));
+    $('#png').disabled=false;
+    setStatus(`已预览：${d.FNAME}（${d.FCODE}）｜最新净值日 ${fmtDate(d.NAV[d.NAV.length-1].x)}`,'ok');
+  }catch(e){setStatus(''+e,'err');}
+}
+function dl(cv,fname){const a=document.createElement('a');a.download=fname;a.href=cv.toDataURL('image/png');a.click();}
+// 导出：优先用 html2canvas（联网时保真度更高）；若 CDN 被拦截则用纯本地 SVG foreignObject 兜底，零外部依赖
+async function capture(fname){
+  const card=$('#card');
+  if(window.html2canvas){
+    try{ const cv=await html2canvas(card,{scale:2,backgroundColor:'#ffffff',useCORS:true}); dl(cv,fname); return; }catch(e){/* 落到兜底 */}
+  }
+  const w=card.offsetWidth,h=card.offsetHeight;
+  const xhtml=new XMLSerializer().serializeToString(card.cloneNode(true));
+  const css=(document.querySelector('style')||{}).textContent||'';
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>${css}</style>${xhtml}</div></foreignObject></svg>`;
+  const img=new Image();
+  await new Promise((res,rej)=>{img.onload=res;img.onerror=()=>rej('导出失败：请用 Chrome/Edge 浏览器打开');img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);});
+  const scale=2,cv=document.createElement('canvas');cv.width=w*scale;cv.height=h*scale;
+  const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);ctx.setTransform(scale,0,0,scale,0,0);ctx.drawImage(img,0,0);
+  dl(cv,fname);
+}
+$('#preview').onclick=preview;
+$('#png').onclick=()=>{ if(previewCode&&cache[previewCode]){ const d=cache[previewCode]; capture(`${previewCode}_每日申购追踪_${fmtDate(d.NAV[d.NAV.length-1].x)}.png`);} };
+$('#batch').onclick=async()=>{
+  const rows=rowsData(); if(!rows.length){setStatus('请至少填一个有效基金代码','err');return;}
+  $('#batch').disabled=$('#preview').disabled=true; let ok=0;
+  for(let i=0;i<rows.length;i++){
+    const {code,start}=rows[i]; setStatus(`批量导出 ${i+1}/${rows.length}：${code} …`,'');
+    try{ const d=await loadFund(code); const m=computeModel(d,start);
+      renderCard(m); await sleep(140); await capture(`${code}_每日申购追踪_${fmtDate(m.tdate)}.png`); ok++; await sleep(420);
+    }catch(e){ setStatus(''+e,'err'); await sleep(600); }
+  }
+  $('#batch').disabled=$('#preview').disabled=false;
+  setStatus(`批量完成：成功 ${ok}/${rows.length} 张（见浏览器下载）`,'ok');
+};
+
+// init
+loadIndex().then(()=>{ $$('#fundlist .fund-row .code').forEach(c=>{const n=nameOf(c.value.trim());const nm=c.parentElement.querySelector('.ac-name');if(n)nm.textContent='✓ '+n;}); });
+initRows();
+</script>
+</body>
+</html>
