@@ -111,6 +111,21 @@
   .foot{padding:16px 40px 8px;font-size:11.5px;color:#9aa3b5;line-height:1.85}
   .warn{margin:6px 40px 30px;background:#fdf2f2;border:1px solid #f6dede;border-left:4px solid var(--badge);border-radius:8px;padding:13px 18px;font-size:12.5px;color:#8a4141}
   .empty{padding:70px 34px;text-align:center;color:var(--muted)}
+  /* 新发产品业绩汇总表 */
+  .sumsec{padding:24px 30px}
+  .sumtb{width:100%;border-collapse:collapse;font-size:14px}
+  .sumtb thead th{background:linear-gradient(180deg,#243352,#1b284a);color:#eaf0fb;font-weight:600;padding:13px 6px;text-align:center;font-size:13px;letter-spacing:.3px}
+  .sumtb thead th.pn{text-align:left;padding-left:16px}
+  .sumtb thead th:first-child{border-top-left-radius:8px}.sumtb thead th:last-child{border-top-right-radius:8px}
+  .sumtb tbody td{padding:15px 6px;text-align:center;border-bottom:1px solid #eef1f6;color:#3b4763;font-weight:600}
+  .sumtb tbody tr:nth-child(even) td{background:#fafbfd}
+  .sumtb td.pn{text-align:left;padding-left:16px;font-weight:400}
+  .sumtb td.pn b{display:block;font-size:13.5px;color:var(--navy2);font-weight:700;line-height:1.35}
+  .sumtb td.pn span{font-size:11.5px;color:var(--muted)}
+  .sumtb td.strong{font-weight:800}
+  .sumtb td.na{color:#c2c8d2;font-weight:400}
+  /* 新发标签模式：隐藏与每日追踪相关的控件 */
+  .mode-new .fund-row .start,.mode-new .fund-row .end,.mode-new .rhead span:nth-child(3),.mode-new .rhead span:nth-child(4),.mode-new #png,.mode-new .wenan-wrap{display:none}
 </style>
 </head>
 <body>
@@ -254,6 +269,50 @@ ${introOf(m.FCODE)}
 ${div}
 ⚠️ 基金有风险，投资需谨慎，仅供内部参考`;
 }
+
+/* ===== 新发产品业绩汇总（一张图） ===== */
+function summaryRow(d){
+  const NAV=d.NAV,L=NAV.length-1,nav=NAV[L].y;
+  const rr=off=>{const t=rangeReturn(NAV,L,off);return t?t.r:null;};
+  const acv=acOnOrBefore(d.AC,NAV[L].x);
+  return {name:d.FNAME,code:d.FCODE,since:(acv!=null?acv:nav)-1,vals:[7,30,91,182,365,730].map(rr),tdate:NAV[L].x};
+}
+function renderSummary(rows,tdate){
+  const sp=v=>v==null?'--':(v>=0?'+':'')+(v*100).toFixed(2)+'%';
+  const cl=v=>v==null?'na':(v>=0?'up':'down');
+  const cell=v=>`<td class="${cl(v)}">${sp(v)}</td>`;
+  const body=rows.map(r=>`<tr>
+      <td class="pn"><b>${r.name}</b><span>${r.code}</span></td>
+      <td class="strong ${cl(r.since)}">${sp(r.since)}</td>
+      ${r.vals.map(cell).join('')}
+    </tr>`).join('');
+  $('#card').innerHTML=`
+    <div class="topbar"></div>
+    <div class="head">
+      <div><div class="name">新发产品业绩一览</div><div class="subtype">首发 / 新发产品 · 净值区间表现</div></div>
+      <div class="right"><div class="track">业绩播报</div><div class="trackdate">截至 ${fmtDate(tdate)}</div></div>
+    </div>
+    <div class="sumsec">
+      <table class="sumtb">
+        <thead><tr><th class="pn">产品名称</th><th>成立以来</th><th>近1周</th><th>近1月</th><th>近3月</th><th>近6月</th><th>近1年</th><th>近2年</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>
+    <div class="foot">数据来源：天天基金；区间收益为费前口径，成立以来＝单位净值/面值−1；标“--”表示成立时间未满该区间。数据截至 ${fmtDate(tdate)}，生成日期 ${fmtDate(Date.now())}。</div>
+    <div class="warn">⚠ 风险提示：基金有风险，投资需谨慎。本材料不构成投资建议，基金过往业绩不预示其未来表现。</div>`;
+}
+async function newExport(previewOnly){
+  const rows=rowsData(true); if(!rows.length){setStatus('请先勾选至少一只产品','err');return;}
+  $('#batch').disabled=$('#preview').disabled=true;
+  const models=[]; let tdate=0;
+  for(let i=0;i<rows.length;i++){ const {code}=rows[i]; setStatus(`抓取 ${i+1}/${rows.length}：${code} …`,'');
+    try{ const d=await loadFund(code); models.push(summaryRow(d)); tdate=Math.max(tdate,d.NAV[d.NAV.length-1].x); }catch(e){ setStatus('部分基金抓取失败：'+e,'err'); } }
+  if(!models.length){ setStatus('未取到任何数据','err'); $('#batch').disabled=$('#preview').disabled=false; return; }
+  renderSummary(models,tdate);
+  if(!previewOnly){ await sleep(160); await capture(`新发产品业绩一览_${fmtDate(tdate)}.png`); }
+  $('#batch').disabled=$('#preview').disabled=false;
+  setStatus(previewOnly?'已预览业绩表（点导出保存图片）':'✅ 已导出新发产品业绩图',' ok');
+}
 let previewCode=null, IDX=null;   // IDX: Map code->[code,py,name,type]
 
 const WD=['日','一','二','三','四','五','六'];
@@ -347,11 +406,15 @@ function switchTab(t){
   if(t===activeTab) return;
   saveCfg();                      // 存当前标签
   activeTab=t;
+  const nb=(t==='new');
   $$('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
-  const lbl=$('#plabel-txt'); if(lbl) lbl.textContent = t==='new'?'新发产品列表':'基金列表';
+  document.querySelector('.pbody').classList.toggle('mode-new',nb);
+  const lbl=$('#plabel-txt'); if(lbl) lbl.textContent = nb?'新发产品列表':'基金列表';
+  $('#batch').textContent = nb?'导出新发产品业绩图':'导出勾选 PNG';
+  $('#preview').textContent = nb?'预览业绩表':'预览首只';
   $('#fundlist').innerHTML=''; initRows();
   const pa=$('#pickall'); if(pa) pa.checked=true;
-  $('#card').innerHTML='<div class="empty">添加基金代码后点击「预览首只」</div>';
+  $('#card').innerHTML = nb?'<div class="empty">勾选产品后点「预览业绩表 / 导出新发产品业绩图」</div>':'<div class="empty">添加基金代码后点击「预览首只」</div>';
   $('#wenan').value=''; $('#png').disabled=true; $('#copywenan').disabled=true; previewCode=null;
   setStatus('',' ');
 }
@@ -483,9 +546,10 @@ async function capture(fname){
   const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);ctx.setTransform(scale,0,0,scale,0,0);ctx.drawImage(img,0,0);
   dl(cv,fname);
 }
-$('#preview').onclick=preview;
+$('#preview').onclick=()=>activeTab==='new'?newExport(true):preview();
 $('#png').onclick=()=>{ if(previewCode&&cache[previewCode]){ const d=cache[previewCode]; capture(`${previewCode}_每日申购追踪_${fmtDate(d.NAV[d.NAV.length-1].x)}.png`);} };
 $('#batch').onclick=async()=>{
+  if(activeTab==='new'){ return newExport(false); }
   const rows=rowsData(true); if(!rows.length){setStatus('请先勾选至少一只产品','err');return;}
   $('#batch').disabled=$('#preview').disabled=true; let ok=0;
   for(let i=0;i<rows.length;i++){
