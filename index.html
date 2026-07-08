@@ -49,6 +49,12 @@
   button:disabled{opacity:.5;cursor:not-allowed}
   .status{margin-top:14px;font-size:13px;min-height:18px}.status.err{color:var(--up)}.status.ok{color:var(--down)}
   .note{margin-top:14px;font-size:11.5px;color:var(--muted);line-height:1.75;border-top:1px dashed var(--line);padding-top:13px}
+  .wenan-wrap{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+  #wenan{width:100%;height:220px;box-sizing:border-box;border:1px solid #d7dce6;border-radius:9px;padding:12px 13px;font-size:13px;line-height:1.75;color:#2d3648;resize:vertical;font-family:inherit;background:#fbfcfe}
+  #wenan:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(34,49,90,.1)}
+  .btns2{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+  #copywenan{background:var(--navy);color:#fff}#copywenan:hover{background:#1a2846}
+  #batchwenan{background:#fff;color:#a9812f;border-color:#e4cf9c}#batchwenan:hover{background:#fbf6ea}
 
   #card{width:1000px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 12px 38px rgba(20,30,60,.13),0 2px 8px rgba(20,30,60,.06);margin:0 auto;border:1px solid #eef1f6}
   #card *{font-variant-numeric:tabular-nums}
@@ -118,6 +124,14 @@
         <button class="act" id="preview">预览首只</button>
         <button class="act" id="png" disabled>导出当前 PNG</button>
       </div>
+      <div class="wenan-wrap">
+        <div class="plabel"><span class="bar"></span>微信播报文案 <span class="cnt">预览后自动生成，可复制发群</span></div>
+        <textarea id="wenan" readonly placeholder="点击「预览首只」后，这里生成该基金的微信播报文案（含涨跌图标、营销钩子、产品简介），可直接复制粘贴到微信"></textarea>
+        <div class="btns2">
+          <button class="act" id="copywenan" disabled>复制文案</button>
+          <button class="act" id="batchwenan">批量导出全部文案(txt)</button>
+        </div>
+      </div>
       <div id="status" class="status"></div>
       <div class="note">数据来源：天天基金公开接口（浏览器内脚本加载，需联网）。区间年化＝(1+区间收益)^(365/天数)−1（复利）；每日申购年化＝申购收益率×365/持有天数（单利）。红涨绿跌。费率分档表（申购/赎回）已按各产品预置在文件顶部的 FEE_DATA 配置中，如需修改直接编辑该处即可，全部产品同步生效。</div>
     </div>
@@ -169,6 +183,56 @@ function feeTablesHTML(m){
     <div class="feebox"><div class="feeh">申购费率</div><table class="feetb"><tr><td class="k">费率</td><td class="v">${m.buyFee}${m.srcFee?'（原'+m.srcFee+'）':''}</td></tr></table></div>
     <div class="feebox"><div class="feeh">赎回费率</div><table class="feetb"><tr><td class="k">费率</td><td class="v">${rd}</td></tr></table></div>
   </div>`;
+}
+
+/* ★★★ 微信播报文案：产品简介 + 分类（钩子按分类 + 涨/跌语气轮换）★★★
+   修改方法：改下面对应代码的 intro（产品简介）或 cat（分类：growth成长/bond债券/broad宽基/pension养老）。
+   钩子在 HOOKS 里按分类维护，up=涨日、down=跌日，每天自动轮换一句。 */
+const WENAN_DATA={
+  '020356':{intro:'紧密跟踪中证半导体材料设备主题指数，聚焦设备材料国产替代高景气赛道，捕捉行业高成长弹性，适合看好半导体、能承受波动的进取型投资者。',cat:'growth'},
+  '019829':{intro:'聚焦数字经济产业链，主动精选数字基建、人工智能、软件应用等数字产业成长龙头，把握产业数字化升级红利，适合看好数字经济长期趋势、能承受波动的成长型投资者。',cat:'growth'},
+  '008585':{intro:'紧密跟踪中证人工智能主题指数，覆盖AI算力、算法与应用产业链，把握人工智能产业浪潮，适合看好AI长期成长、能承受较高波动的进取型投资者。',cat:'growth'},
+  '018345':{intro:'紧密跟踪中证机器人指数，聚焦人形机器人与智能制造产业链，捕捉具身智能新赛道成长机遇，适合看好机器人主题、能承受波动的进取型投资者。',cat:'growth'},
+  '023885':{intro:'紧密跟踪中证金融科技主题指数，聚焦金融IT与数字支付等金融科技龙头，把握金融数字化升级机遇，适合看好金融科技、能承受波动的进取型投资者。',cat:'growth'},
+  '013402':{intro:'紧密跟踪恒生科技指数，覆盖港股互联网与科技龙头，把握中国科技资产价值机遇，适合看好港股科技、能承受波动的进取型投资者。',cat:'growth'},
+  '016708':{intro:'紧密跟踪中证有色金属指数，聚焦工业金属与新能源金属产业链，把握资源品景气周期，适合看好有色板块、能承受波动的进取型投资者。',cat:'growth'},
+  '025542':{intro:'主动把握行业景气轮动，精选高景气度成长行业龙头，力争超额收益，适合追求成长弹性、能承受波动的进取型投资者。',cat:'growth'},
+  '007592':{intro:'坚持价值投资理念，主动精选估值合理、盈利稳健的优质龙头，力争长期稳健增值，适合偏好价值风格的稳健成长型投资者。',cat:'broad'},
+  '001016':{intro:'以沪深300指数为基准的指数增强产品，紧密跟踪宽基指数并力争稳定超额收益，适合看好A股核心资产、追求指数增强收益的投资者。',cat:'broad'},
+  '000071':{intro:'紧密跟踪恒生指数，覆盖港股大盘蓝筹龙头，一键覆盖香港核心资产，适合看好港股龙头的投资者。',cat:'broad'},
+  '004063':{intro:'以中高等级债券为主要投资标的，票息打底、久期灵活，力求稳健收益与较低波动，适合追求稳健的中低风险偏好投资者。',cat:'bond'},
+  '001011':{intro:'以债券投资为主，严选中高等级信用债，力求稳健回报与良好持有体验，适合追求稳健的中低风险偏好投资者。',cat:'bond'},
+  '007667':{intro:'以债券资产为主的固收产品，注重信用风险控制与久期管理，力求平稳收益体验，适合追求稳健的中低风险偏好投资者。',cat:'bond'},
+  '015717':{intro:'固收+稳健策略，以债券打底、少量权益增强，严控回撤、力求稳中有进，适合追求稳健增值的中低风险偏好投资者。',cat:'bond'},
+  '010281':{intro:'养老目标风险（保守型）FOF，设一年最短持有期，多资产分散配置、注重低波稳健，适合养老储备与稳健配置需求的投资者。',cat:'pension'}
+};
+const HOOKS={
+  growth:{up:['板块强势领涨，成长逻辑加速兑现','量价齐升，主题热度持续升温','赛道景气高企，龙头弹性尽显'],down:['短期波动难改长期成长逻辑','回调不改产业上行趋势','高成长赛道，长期主线依旧清晰']},
+  bond:{up:['净值稳步向上，持有体验从容','稳健上行，票息价值稳稳兑现','攻守兼备，稳中有进'],down:['低波稳健，短期扰动无碍长期','债市短震，稳健底色不改','回撤可控，稳字当头']},
+  broad:{up:['核心资产走强，蓝筹稳步向上','指数发力，龙头引领上行','估值修复行情延续'],down:['短期震荡，核心资产长期价值犹在','指数回踩，长期逻辑不改','波动之中更显从容']},
+  pension:{up:['稳健向上，长期复利可期','低波前行，稳中有进','稳字当头，力争穿越周期'],down:['低波稳健，短期波动不足虑','养老长跑，稳健为先','控回撤、求稳健，静待时间价值']}
+};
+function catOf(code){return (WENAN_DATA[code]&&WENAN_DATA[code].cat)||'growth';}
+function introOf(code){return (WENAN_DATA[code]&&WENAN_DATA[code].intro)||((typeOf(code)?'本基金为'+typeOf(code)+'基金，':'')+'依据基金合同约定的策略运作，详见基金合同及最新定期报告。');}
+function pickHook(m){const cat=catOf(m.FCODE),dir=m.dayChg>=0?'up':'down';const pool=(HOOKS[cat]||HOOKS.growth)[dir];const idx=Math.floor(m.tdate/86400000)%pool.length;return (m.dayChg>=0?'🚀':'💡')+pool[idx];}
+function genWenan(m){
+  const icon=m.dayChg>=0?'📈':'📉';
+  const sp=v=>(v>=0?'+':'')+(v*100).toFixed(2)+'%';
+  const rp=i=>{const r=m.ranges[i];return r&&r.r!=null?sp(r.r):'--';};
+  const div='━━━━━━━━━━━━';
+  return `${pickHook(m)}
+📊${m.FNAME}｜${m.FCODE}
+⌛️每日净值播报 · ${fmtDate(m.tdate)}
+${div}
+${icon}当日涨跌 ${sp(m.dayChg)}
+▎区间业绩
+近1月 ${rp(1)} 近3月 ${rp(2)}
+近6月 ${rp(3)} 近1年 ${rp(4)}
+成立以来 ${sp(m.acnav-1)}
+▎产品简介
+${introOf(m.FCODE)}
+${div}
+⚠️ 基金有风险，投资需谨慎，仅供内部参考`;
 }
 let previewCode=null, IDX=null;   // IDX: Map code->[code,py,name,type]
 
@@ -355,8 +419,8 @@ async function preview(){
   const rows=rowsData(); if(!rows.length){setStatus('请至少填一个有效的6位基金代码','err');return;}
   const {code,start}=rows[0]; setStatus('抓取中…','');
   try{ const d=await loadFund(code); previewCode=code;
-    renderCard(computeModel(d,start));
-    $('#png').disabled=false;
+    const m=computeModel(d,start); renderCard(m);
+    $('#wenan').value=genWenan(m); $('#png').disabled=false; $('#copywenan').disabled=false;
     setStatus(`已预览：${d.FNAME}（${d.FCODE}）｜最新净值日 ${fmtDate(d.NAV[d.NAV.length-1].x)}`,'ok');
   }catch(e){setStatus(''+e,'err');}
 }
@@ -390,6 +454,23 @@ $('#batch').onclick=async()=>{
   }
   $('#batch').disabled=$('#preview').disabled=false;
   setStatus(`批量完成：成功 ${ok}/${rows.length} 张（见浏览器下载）`,'ok');
+};
+
+$('#copywenan').onclick=()=>{
+  const t=$('#wenan').value; if(!t){return;}
+  const done=()=>setStatus('✅ 文案已复制，可直接粘贴到微信','ok');
+  const fb=()=>{const ta=$('#wenan');ta.readOnly=false;ta.focus();ta.select();let ok=false;try{ok=document.execCommand('copy');}catch(e){}ta.readOnly=true;window.getSelection&&window.getSelection().removeAllRanges();ok?done():setStatus('请手动全选复制','err');};
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(done,fb);}else fb();
+};
+$('#batchwenan').onclick=async()=>{
+  const rows=rowsData(); if(!rows.length){setStatus('请至少填一个有效基金代码','err');return;}
+  $('#batchwenan').disabled=true; const parts=[]; let ok=0;
+  for(let i=0;i<rows.length;i++){ const {code,start}=rows[i]; setStatus(`生成文案 ${i+1}/${rows.length}：${code} …`,'');
+    try{ const d=await loadFund(code); parts.push(genWenan(computeModel(d,start))); ok++; }catch(e){ parts.push(`【${code}】生成失败：${e}`); } }
+  const blob=new Blob([parts.join('\n\n\n')],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a'); a.download=`微信播报文案_${fmtDate(Date.now())}.txt`; a.href=URL.createObjectURL(blob); a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  $('#batchwenan').disabled=false; setStatus(`✅ 已生成 ${ok}/${rows.length} 条文案（见下载的 txt）`,'ok');
 };
 
 // init
