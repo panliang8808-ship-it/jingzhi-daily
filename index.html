@@ -22,7 +22,7 @@
   .plabel .cnt{font-weight:500;color:var(--muted);font-size:12px}
   .idxtip{font-size:11.5px;color:#6a7488;margin:0 0 15px;padding:8px 12px;background:#f6f8fc;border:1px solid #eef1f6;border-radius:9px}
   .rhead{display:flex;gap:8px;font-size:11px;color:#98a1b2;margin:0 0 7px 2px;letter-spacing:.3px}
-  .rhead span:nth-child(1){flex:2;min-width:150px}.rhead span:nth-child(2){flex:1.3;min-width:130px}.rhead span:nth-child(3){width:36px}
+  .rhead span:nth-child(1){flex:2;min-width:150px}.rhead span:nth-child(2){flex:1.3;min-width:120px}.rhead span:nth-child(3){flex:1.3;min-width:120px}.rhead span:nth-child(4){width:36px}
   .fund-row{display:flex;gap:8px;align-items:center;margin-bottom:9px}
   .ac-wrap{position:relative;flex:2;min-width:150px}
   .ac-wrap .code{width:100%;height:40px;padding:0 12px;border:1px solid #d7dce6;border-radius:9px;font-size:14px;color:var(--ink);background:#fff;transition:border-color .15s,box-shadow .15s}
@@ -32,8 +32,8 @@
   .ac-item{padding:9px 11px;font-size:13px;cursor:pointer;border-radius:7px}
   .ac-item:hover,.ac-item.on{background:#eef2fb}
   .ac-item b{color:var(--navy)} .ac-item .t{color:var(--muted);font-size:11px;margin-left:6px}
-  .fund-row .start{flex:1.3;min-width:130px;height:40px;padding:0 10px;border:1px solid #d7dce6;border-radius:9px;font-size:13px;color:var(--ink);background:#fff;transition:border-color .15s,box-shadow .15s}
-  .fund-row .start:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(34,49,90,.1)}
+  .fund-row .start,.fund-row .end{flex:1.3;min-width:120px;height:40px;padding:0 9px;border:1px solid #d7dce6;border-radius:9px;font-size:13px;color:var(--ink);background:#fff;transition:border-color .15s,box-shadow .15s}
+  .fund-row .start:focus,.fund-row .end:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(34,49,90,.1)}
   .fund-row .del{background:#f4f6fa;color:#aab2c2;border:1px solid #e6eaf1;border-radius:9px;width:36px;height:40px;font-size:17px;cursor:pointer;flex:none;transition:.15s}
   .fund-row .del:hover{background:#fdecec;color:var(--up);border-color:#f3d4d4}
   .add{background:#f4f7fd;color:var(--navy);border:1px dashed #bcc9e6;border-radius:9px;padding:11px;width:100%;font-size:13px;font-weight:600;cursor:pointer;margin-top:5px;transition:.15s}
@@ -116,7 +116,7 @@
       <div class="sub">每只基金单独设置申购起始日期；终点固定为最新净值。申购日 = 起始日 → 最新净值日 之间每个交易日。配置自动保存在本地。</div>
       <div id="idxtip" class="idxtip">正在加载基金检索库（用于代码联想 / 类型识别）…</div>
       <div class="plabel"><span class="bar"></span>基金列表 <span class="cnt" id="fcnt"></span></div>
-      <div class="rhead"><span>基金代码（输入可联想名称）</span><span>申购起始日期</span><span></span></div>
+      <div class="rhead"><span>基金代码（输入可联想名称）</span><span>申购起始日期</span><span>申购截止日（可空=最新）</span><span></span></div>
       <div id="fundlist"></div>
       <button class="add" id="add">＋ 添加基金</button>
       <div class="btns">
@@ -275,13 +275,14 @@ function suggest(q){
 function saveCfg(){
   const rows=$$('#fundlist .fund-row').map(r=>({
     code:r.querySelector('.code').value.trim(),
-    start:r.querySelector('.start').value
+    start:r.querySelector('.start').value,
+    end:r.querySelector('.end').value
   }));
   try{localStorage.setItem(CFG_KEY,JSON.stringify(rows));}catch(e){}
 }
 function loadCfg(){ try{return JSON.parse(localStorage.getItem(CFG_KEY))||null}catch(e){return null} }
 
-function addRow(cfg={code:'',start:'',redeem:''}){
+function addRow(cfg={code:'',start:'',end:''}){
   const div=document.createElement('div'); div.className='fund-row';
   div.innerHTML=`
     <div class="ac-wrap">
@@ -290,6 +291,7 @@ function addRow(cfg={code:'',start:'',redeem:''}){
       <div class="ac-list"></div>
     </div>
     <input class="start" type="date" value="${cfg.start||''}" title="申购起始日期">
+    <input class="end" type="date" value="${cfg.end||''}" title="申购截止日（不填=最新净值日）">
     <button class="del" title="删除">×</button>`;
   const code=div.querySelector('.code'), nm=div.querySelector('.ac-name'), list=div.querySelector('.ac-list');
   const showName=()=>{ const n=nameOf(code.value.trim()); nm.textContent=n?('✓ '+n):''; };
@@ -304,6 +306,7 @@ function addRow(cfg={code:'',start:'',redeem:''}){
   });
   code.addEventListener('blur',()=>setTimeout(()=>list.style.display='none',180));
   div.querySelector('.start').onchange=saveCfg;
+  div.querySelector('.end').onchange=saveCfg;
   div.querySelector('.del').onclick=()=>{ div.remove(); if(!$$('#fundlist .fund-row').length) addRow(); saveCfg(); updCnt(); };
   $('#fundlist').appendChild(div); updCnt();
 }
@@ -356,7 +359,7 @@ function fmtFee(rate,src){
   return {buy,src:showSrc};
 }
 
-function computeModel(d,startStr,redeem){
+function computeModel(d,startStr,endStr){
   const NAV=d.NAV,L=NAV.length-1,cur=NAV[L],nav=cur.y;
   const dayChg=cur.e!=null?cur.e/100:(L>0?nav/NAV[L-1].y-1:0);
   const acv=acOnOrBefore(d.AC,cur.x),acnav=acv!=null?acv:nav;
@@ -366,9 +369,11 @@ function computeModel(d,startStr,redeem){
   if(startStr){ startT=new Date(startStr+'T00:00:00').getTime(); }
   else { startT=NAV[Math.max(0,L-5)].x; }             // 默认约5个交易日前
   if(startT<NAV[0].x) startT=NAV[0].x;
+  const endT = endStr ? new Date(endStr+'T23:59:59').getTime() : NAV[L].x;  // 申购截止日，不填=最新净值日
   const subs=[];
   for(let k=0;k<L;k++){
     if(NAV[k].x<startT) continue;
+    if(NAV[k].x>endT) continue;
     const s=NAV[k],held=Math.max(1,Math.round((cur.x-s.x)/86400000));
     const dchg=s.e!=null?s.e/100:(k>0?s.y/NAV[k-1].y-1:0);
     const ret=nav/s.y-1;
@@ -377,7 +382,7 @@ function computeModel(d,startStr,redeem){
   const maxAbs=Math.max(...subs.map(x=>Math.abs(x.ann)),1e-9);
   const fee=fmtFee(d.rate,d.srcRate);
   return {FNAME:d.FNAME,FCODE:d.FCODE,type:typeOf(d.FCODE),nav,dayChg,acnav,ranges,subs,maxAbs,
-          tdate:cur.x,buyFee:fee.buy,srcFee:fee.src,redeem:redeem||'',minD:fmtDate(NAV[0].x),maxD:fmtDate(NAV[L].x)};
+          tdate:cur.x,buyFee:fee.buy,srcFee:fee.src,redeem:'',minD:fmtDate(NAV[0].x),maxD:fmtDate(NAV[L].x)};
 }
 
 function renderCard(m){
@@ -413,13 +418,13 @@ function renderCard(m){
 }
 
 function setStatus(t,c){const el=$('#status');el.textContent=t;el.className='status '+(c||'');}
-function rowsData(){ return $$('#fundlist .fund-row').map(r=>({code:r.querySelector('.code').value.trim(),start:r.querySelector('.start').value})).filter(x=>/^\d{6}$/.test(x.code)); }
+function rowsData(){ return $$('#fundlist .fund-row').map(r=>({code:r.querySelector('.code').value.trim(),start:r.querySelector('.start').value,end:r.querySelector('.end').value})).filter(x=>/^\d{6}$/.test(x.code)); }
 
 async function preview(){
   const rows=rowsData(); if(!rows.length){setStatus('请至少填一个有效的6位基金代码','err');return;}
-  const {code,start}=rows[0]; setStatus('抓取中…','');
+  const {code,start,end}=rows[0]; setStatus('抓取中…','');
   try{ const d=await loadFund(code); previewCode=code;
-    const m=computeModel(d,start); renderCard(m);
+    const m=computeModel(d,start,end); renderCard(m);
     $('#wenan').value=genWenan(m); $('#png').disabled=false; $('#copywenan').disabled=false;
     setStatus(`已预览：${d.FNAME}（${d.FCODE}）｜最新净值日 ${fmtDate(d.NAV[d.NAV.length-1].x)}`,'ok');
   }catch(e){setStatus(''+e,'err');}
@@ -447,8 +452,8 @@ $('#batch').onclick=async()=>{
   const rows=rowsData(); if(!rows.length){setStatus('请至少填一个有效基金代码','err');return;}
   $('#batch').disabled=$('#preview').disabled=true; let ok=0;
   for(let i=0;i<rows.length;i++){
-    const {code,start}=rows[i]; setStatus(`批量导出 ${i+1}/${rows.length}：${code} …`,'');
-    try{ const d=await loadFund(code); const m=computeModel(d,start);
+    const {code,start,end}=rows[i]; setStatus(`批量导出 ${i+1}/${rows.length}：${code} …`,'');
+    try{ const d=await loadFund(code); const m=computeModel(d,start,end);
       renderCard(m); await sleep(140); await capture(`${code}_每日申购追踪_${fmtDate(m.tdate)}.png`); ok++; await sleep(420);
     }catch(e){ setStatus(''+e,'err'); await sleep(600); }
   }
@@ -465,8 +470,8 @@ $('#copywenan').onclick=()=>{
 $('#batchwenan').onclick=async()=>{
   const rows=rowsData(); if(!rows.length){setStatus('请至少填一个有效基金代码','err');return;}
   $('#batchwenan').disabled=true; const parts=[]; let ok=0;
-  for(let i=0;i<rows.length;i++){ const {code,start}=rows[i]; setStatus(`生成文案 ${i+1}/${rows.length}：${code} …`,'');
-    try{ const d=await loadFund(code); parts.push(genWenan(computeModel(d,start))); ok++; }catch(e){ parts.push(`【${code}】生成失败：${e}`); } }
+  for(let i=0;i<rows.length;i++){ const {code,start,end}=rows[i]; setStatus(`生成文案 ${i+1}/${rows.length}：${code} …`,'');
+    try{ const d=await loadFund(code); parts.push(genWenan(computeModel(d,start,end))); ok++; }catch(e){ parts.push(`【${code}】生成失败：${e}`); } }
   const blob=new Blob([parts.join('\n\n\n')],{type:'text/plain;charset=utf-8'});
   const a=document.createElement('a'); a.download=`微信播报文案_${fmtDate(Date.now())}.txt`; a.href=URL.createObjectURL(blob); a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),3000);
