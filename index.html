@@ -22,7 +22,14 @@
   .plabel .cnt{font-weight:500;color:var(--muted);font-size:12px}
   .idxtip{font-size:11.5px;color:#6a7488;margin:0 0 15px;padding:8px 12px;background:#f6f8fc;border:1px solid #eef1f6;border-radius:9px}
   .rhead{display:flex;gap:8px;font-size:11px;color:#98a1b2;margin:0 0 7px 2px;letter-spacing:.3px}
-  .rhead span:nth-child(1){flex:2;min-width:150px}.rhead span:nth-child(2){flex:1.3;min-width:120px}.rhead span:nth-child(3){flex:1.3;min-width:120px}.rhead span:nth-child(4){width:36px}
+  .rhead span:nth-child(1){width:24px;flex:none}.rhead span:nth-child(2){flex:2;min-width:150px}.rhead span:nth-child(3){flex:1.3;min-width:120px}.rhead span:nth-child(4){flex:1.3;min-width:120px}.rhead span:nth-child(5){width:36px}
+  .rhead .pk{display:flex;align-items:center;justify-content:center}
+  .fund-row .pickwrap{width:24px;flex:none;display:flex;align-items:center;justify-content:center;margin:0;cursor:pointer}
+  .pick,#pickall{width:16px;height:16px;cursor:pointer;accent-color:var(--navy);margin:0}
+  .tabs{display:flex;gap:6px;background:#eef1f6;padding:4px;border-radius:11px;margin-bottom:16px}
+  .tab{flex:1;border:none;background:transparent;padding:10px 12px;border-radius:8px;font-size:13.5px;font-weight:600;color:#6b7688;cursor:pointer;transition:.15s}
+  .tab.on{background:#fff;color:var(--navy);box-shadow:0 1px 4px rgba(20,30,60,.1)}
+  .tab:hover:not(.on){color:var(--navy)}
   .fund-row{display:flex;gap:8px;align-items:center;margin-bottom:9px}
   .ac-wrap{position:relative;flex:2;min-width:150px}
   .ac-wrap .code{width:100%;height:40px;padding:0 12px;border:1px solid #d7dce6;border-radius:9px;font-size:14px;color:var(--ink);background:#fff;transition:border-color .15s,box-shadow .15s}
@@ -113,14 +120,18 @@
     <div class="ptop"></div>
     <div class="phead"><h2>基金每日申购追踪 · 净值图生成器</h2><span class="tag">NAV DAILY</span></div>
     <div class="pbody">
-      <div class="sub">每只基金单独设置申购起始日期；终点固定为最新净值。申购日 = 起始日 → 最新净值日 之间每个交易日。配置自动保存在本地。</div>
+      <div class="tabs">
+        <button class="tab on" data-t="main">全部产品 · 每日追踪</button>
+        <button class="tab" data-t="new">新发产品追踪</button>
+      </div>
+      <div class="sub">每只基金可单独设置申购起始/截止日期（截止日可空=最新净值日）；左侧勾选框决定导出范围。配置自动保存在本地。</div>
       <div id="idxtip" class="idxtip">正在加载基金检索库（用于代码联想 / 类型识别）…</div>
-      <div class="plabel"><span class="bar"></span>基金列表 <span class="cnt" id="fcnt"></span></div>
-      <div class="rhead"><span>基金代码（输入可联想名称）</span><span>申购起始日期</span><span>申购截止日（可空=最新）</span><span></span></div>
+      <div class="plabel"><span class="bar"></span><span id="plabel-txt">基金列表</span> <span class="cnt" id="fcnt"></span></div>
+      <div class="rhead"><span class="pk"><input type="checkbox" id="pickall" checked title="全选/全不选"></span><span>基金代码（输入可联想名称）</span><span>申购起始日期</span><span>申购截止日（可空=最新）</span><span></span></div>
       <div id="fundlist"></div>
       <button class="add" id="add">＋ 添加基金</button>
       <div class="btns">
-        <button class="act" id="batch">批量导出全部 PNG</button>
+        <button class="act" id="batch">导出勾选 PNG</button>
         <button class="act" id="preview">预览首只</button>
         <button class="act" id="png" disabled>导出当前 PNG</button>
       </div>
@@ -129,7 +140,7 @@
         <textarea id="wenan" readonly placeholder="点击「预览首只」后，这里生成该基金的微信播报文案（含涨跌图标、营销钩子、产品简介），可直接复制粘贴到微信"></textarea>
         <div class="btns2">
           <button class="act" id="copywenan" disabled>复制文案</button>
-          <button class="act" id="batchwenan">批量导出全部文案(txt)</button>
+          <button class="act" id="batchwenan">导出勾选文案(txt)</button>
         </div>
       </div>
       <div id="status" class="status"></div>
@@ -143,8 +154,12 @@
 <script>
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const cache={};                 // code -> {NAV,AC,FNAME,FCODE,rate,srcRate}
-const CFG_KEY='fundTrackerCfg', CFG_VER_KEY='fundTrackerVer', CFG_VER='v3-16funds';
-const DEFAULT_FUNDS=['004063','001011','007667','013402','018345','023885','010281','000071','007592','008585','001016','015717','025542','016708','019829','020356'];
+const CFG_KEY_MAIN='fundTrackerCfg', CFG_KEY_NEW='fundTrackerCfgNew';
+const DEFAULT_MAIN=['004063','001011','007667','013402','018345','023885','010281','000071','007592','008585','001016','015717','025542','016708','019829','020356'];
+const DEFAULT_NEW=['012098','025423','004063','026897','027692'];   // 新发/首发产品（来自销量表口径）
+let activeTab='main';
+const activeKey=()=>activeTab==='new'?CFG_KEY_NEW:CFG_KEY_MAIN;
+const activeDefaults=()=>activeTab==='new'?DEFAULT_NEW:DEFAULT_MAIN;
 
 /* ★★★ 费率分档表（申购按金额档 / 赎回按持有期档）★★★
    来源：天天基金/华夏基金公开费率，部分按华夏同类产品标准结构预填，标 * 者建议对合同核对后修正。
@@ -190,6 +205,10 @@ function feeTablesHTML(m){
    钩子在 HOOKS 里按分类维护，up=涨日、down=跌日，每天自动轮换一句。 */
 const WENAN_DATA={
   '020356':{intro:'紧密跟踪中证半导体材料设备主题指数，聚焦设备材料国产替代高景气赛道，捕捉行业高成长弹性，适合看好半导体、能承受波动的进取型投资者。',cat:'growth'},
+  '012098':{intro:'主动成长风格，精选高景气行业中的优质成长龙头，设一年最短持有期以平滑短期波动，力争把握产业成长红利，适合看好成长赛道、能承受波动的进取型投资者。',cat:'growth'},
+  '025423':{intro:'紧密跟踪中证500自由现金流指数，聚焦现金流充沛、经营稳健的中盘价值企业，兼顾质量与成长，适合看好自由现金流策略的稳健投资者。',cat:'broad'},
+  '026897':{intro:'主动精选港股通消费板块优质龙头，把握消费复苏与港股估值修复机遇，适合看好港股消费、能承受波动的进取型投资者。',cat:'growth'},
+  '027692':{intro:'偏债混合（固收+）策略，以债券打底、少量权益增强，严控回撤、力求稳健增值，适合追求稳中有进的中低风险偏好投资者。',cat:'bond'},
   '019829':{intro:'聚焦数字经济产业链，主动精选数字基建、人工智能、软件应用等数字产业成长龙头，把握产业数字化升级红利，适合看好数字经济长期趋势、能承受波动的成长型投资者。',cat:'growth'},
   '008585':{intro:'紧密跟踪中证人工智能主题指数，覆盖AI算力、算法与应用产业链，把握人工智能产业浪潮，适合看好AI长期成长、能承受较高波动的进取型投资者。',cat:'growth'},
   '018345':{intro:'紧密跟踪中证机器人指数，聚焦人形机器人与智能制造产业链，捕捉具身智能新赛道成长机遇，适合看好机器人主题、能承受波动的进取型投资者。',cat:'growth'},
@@ -276,15 +295,17 @@ function saveCfg(){
   const rows=$$('#fundlist .fund-row').map(r=>({
     code:r.querySelector('.code').value.trim(),
     start:r.querySelector('.start').value,
-    end:r.querySelector('.end').value
+    end:r.querySelector('.end').value,
+    checked:r.querySelector('.pick').checked
   }));
-  try{localStorage.setItem(CFG_KEY,JSON.stringify(rows));}catch(e){}
+  try{localStorage.setItem(activeKey(),JSON.stringify(rows));}catch(e){}
 }
-function loadCfg(){ try{return JSON.parse(localStorage.getItem(CFG_KEY))||null}catch(e){return null} }
+function loadCfg(){ try{return JSON.parse(localStorage.getItem(activeKey()))||null}catch(e){return null} }
 
 function addRow(cfg={code:'',start:'',end:''}){
   const div=document.createElement('div'); div.className='fund-row';
   div.innerHTML=`
+    <label class="pickwrap"><input type="checkbox" class="pick" ${cfg.checked===false?'':'checked'} title="勾选=纳入导出"></label>
     <div class="ac-wrap">
       <input class="code" maxlength="6" placeholder="6位基金代码" value="${cfg.code||''}">
       <div class="ac-name"></div>
@@ -307,16 +328,28 @@ function addRow(cfg={code:'',start:'',end:''}){
   code.addEventListener('blur',()=>setTimeout(()=>list.style.display='none',180));
   div.querySelector('.start').onchange=saveCfg;
   div.querySelector('.end').onchange=saveCfg;
+  div.querySelector('.pick').onchange=saveCfg;
   div.querySelector('.del').onclick=()=>{ div.remove(); if(!$$('#fundlist .fund-row').length) addRow(); saveCfg(); updCnt(); };
   $('#fundlist').appendChild(div); updCnt();
 }
 function updCnt(){const el=$('#fcnt');if(el)el.textContent='共 '+$$('#fundlist .fund-row').length+' 只';}
 function initRows(){
-  let cfg=loadCfg();
-  let ver=null; try{ver=localStorage.getItem(CFG_VER_KEY);}catch(e){}
-  if(ver!==CFG_VER){ cfg=null; try{localStorage.setItem(CFG_VER_KEY,CFG_VER);}catch(e){} }  // 默认清单升级后覆盖旧缓存
-  if(cfg&&cfg.length) cfg.forEach(addRow);
-  else { DEFAULT_FUNDS.forEach(c=>addRow({code:c})); saveCfg(); }
+  const cfg=loadCfg();
+  if(cfg&&cfg.length) cfg.forEach(c=>addRow(c));
+  else { activeDefaults().forEach(code=>addRow({code})); saveCfg(); }
+  updCnt();
+}
+function switchTab(t){
+  if(t===activeTab) return;
+  saveCfg();                      // 存当前标签
+  activeTab=t;
+  $$('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  const lbl=$('#plabel-txt'); if(lbl) lbl.textContent = t==='new'?'新发产品列表':'基金列表';
+  $('#fundlist').innerHTML=''; initRows();
+  const pa=$('#pickall'); if(pa) pa.checked=true;
+  $('#card').innerHTML='<div class="empty">添加基金代码后点击「预览首只」</div>';
+  $('#wenan').value=''; $('#png').disabled=true; $('#copywenan').disabled=true; previewCode=null;
+  setStatus('',' ');
 }
 $('#add').onclick=()=>{ addRow(); };
 
@@ -418,7 +451,7 @@ function renderCard(m){
 }
 
 function setStatus(t,c){const el=$('#status');el.textContent=t;el.className='status '+(c||'');}
-function rowsData(){ return $$('#fundlist .fund-row').map(r=>({code:r.querySelector('.code').value.trim(),start:r.querySelector('.start').value,end:r.querySelector('.end').value})).filter(x=>/^\d{6}$/.test(x.code)); }
+function rowsData(onlyChecked){ return $$('#fundlist .fund-row').map(r=>({code:r.querySelector('.code').value.trim(),start:r.querySelector('.start').value,end:r.querySelector('.end').value,checked:r.querySelector('.pick').checked})).filter(x=>/^\d{6}$/.test(x.code) && (!onlyChecked||x.checked)); }
 
 async function preview(){
   const rows=rowsData(); if(!rows.length){setStatus('请至少填一个有效的6位基金代码','err');return;}
@@ -449,16 +482,16 @@ async function capture(fname){
 $('#preview').onclick=preview;
 $('#png').onclick=()=>{ if(previewCode&&cache[previewCode]){ const d=cache[previewCode]; capture(`${previewCode}_每日申购追踪_${fmtDate(d.NAV[d.NAV.length-1].x)}.png`);} };
 $('#batch').onclick=async()=>{
-  const rows=rowsData(); if(!rows.length){setStatus('请至少填一个有效基金代码','err');return;}
+  const rows=rowsData(true); if(!rows.length){setStatus('请先勾选至少一只产品','err');return;}
   $('#batch').disabled=$('#preview').disabled=true; let ok=0;
   for(let i=0;i<rows.length;i++){
-    const {code,start,end}=rows[i]; setStatus(`批量导出 ${i+1}/${rows.length}：${code} …`,'');
+    const {code,start,end}=rows[i]; setStatus(`导出勾选 ${i+1}/${rows.length}：${code} …`,'');
     try{ const d=await loadFund(code); const m=computeModel(d,start,end);
       renderCard(m); await sleep(140); await capture(`${code}_每日申购追踪_${fmtDate(m.tdate)}.png`); ok++; await sleep(420);
     }catch(e){ setStatus(''+e,'err'); await sleep(600); }
   }
   $('#batch').disabled=$('#preview').disabled=false;
-  setStatus(`批量完成：成功 ${ok}/${rows.length} 张（见浏览器下载）`,'ok');
+  setStatus(`导出完成：成功 ${ok}/${rows.length} 张（见浏览器下载）`,'ok');
 };
 
 $('#copywenan').onclick=()=>{
@@ -468,7 +501,7 @@ $('#copywenan').onclick=()=>{
   if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(done,fb);}else fb();
 };
 $('#batchwenan').onclick=async()=>{
-  const rows=rowsData(); if(!rows.length){setStatus('请至少填一个有效基金代码','err');return;}
+  const rows=rowsData(true); if(!rows.length){setStatus('请先勾选至少一只产品','err');return;}
   $('#batchwenan').disabled=true; const parts=[]; let ok=0;
   for(let i=0;i<rows.length;i++){ const {code,start,end}=rows[i]; setStatus(`生成文案 ${i+1}/${rows.length}：${code} …`,'');
     try{ const d=await loadFund(code); parts.push(genWenan(computeModel(d,start,end))); ok++; }catch(e){ parts.push(`【${code}】生成失败：${e}`); } }
@@ -477,6 +510,10 @@ $('#batchwenan').onclick=async()=>{
   setTimeout(()=>URL.revokeObjectURL(a.href),3000);
   $('#batchwenan').disabled=false; setStatus(`✅ 已生成 ${ok}/${rows.length} 条文案（见下载的 txt）`,'ok');
 };
+
+// 标签页切换 + 全选
+$$('.tab').forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
+$('#pickall').onchange=()=>{ $$('#fundlist .pick').forEach(p=>p.checked=$('#pickall').checked); saveCfg(); };
 
 // init
 loadIndex().then(()=>{ $$('#fundlist .fund-row .code').forEach(c=>{const n=nameOf(c.value.trim());const nm=c.parentElement.querySelector('.ac-name');if(n)nm.textContent='✓ '+n;}); });
