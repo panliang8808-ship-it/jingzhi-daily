@@ -155,6 +155,7 @@
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const cache={};                 // code -> {NAV,AC,FNAME,FCODE,rate,srcRate}
 const CFG_KEY_MAIN='fundTrackerCfg', CFG_KEY_NEW='fundTrackerCfgNew';
+const CFG_VER_KEY='fundTrackerVer', CFG_VER='v4-tabs';   // 版本升级会重置为默认清单，清掉旧缓存
 const DEFAULT_MAIN=['004063','001011','007667','013402','018345','023885','010281','000071','007592','008585','001016','015717','025542','016708','019829','020356'];
 const DEFAULT_NEW=['012098','025423','004063','026897','027692'];   // 新发/首发产品（来自销量表口径）
 let activeTab='main';
@@ -335,8 +336,11 @@ function addRow(cfg={code:'',start:'',end:''}){
 function updCnt(){const el=$('#fcnt');if(el)el.textContent='共 '+$$('#fundlist .fund-row').length+' 只';}
 function initRows(){
   const cfg=loadCfg();
-  if(cfg&&cfg.length) cfg.forEach(c=>addRow(c));
+  let ver=null; try{ver=localStorage.getItem(CFG_VER_KEY);}catch(e){}
+  const useCfg = cfg && cfg.length && ver===CFG_VER;   // 版本不符则重置为默认清单
+  if(useCfg) cfg.forEach(c=>addRow(c));
   else { activeDefaults().forEach(code=>addRow({code})); saveCfg(); }
+  try{localStorage.setItem(CFG_VER_KEY,CFG_VER);}catch(e){}
   updCnt();
 }
 function switchTab(t){
