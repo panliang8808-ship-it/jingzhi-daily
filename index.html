@@ -124,8 +124,10 @@
   .sumtb td.pn span{font-size:11.5px;color:var(--muted)}
   .sumtb td.strong{font-weight:800}
   .sumtb td.na{color:#c2c8d2;font-weight:400}
+  .sumtb td.dt{color:#5b6577;font-weight:600;font-size:12.5px}
+  .sumtb thead th,.sumtb tbody td{padding-left:5px;padding-right:5px}
   /* 新发标签模式：隐藏与每日追踪相关的控件 */
-  .mode-new .fund-row .start,.mode-new .fund-row .end,.mode-new .rhead span:nth-child(3),.mode-new .rhead span:nth-child(4),.mode-new #png,.mode-new .wenan-wrap{display:none}
+  .mode-new .fund-row .start,.mode-new .fund-row .end,.mode-new .rhead span:nth-child(3),.mode-new .rhead span:nth-child(4),.mode-new #png,.mode-new #preview,.mode-new .wenan-wrap{display:none}
 </style>
 </head>
 <body>
@@ -155,7 +157,7 @@
         <textarea id="wenan" readonly placeholder="点击「预览首只」后，这里生成该基金的微信播报文案（含涨跌图标、营销钩子、产品简介），可直接复制粘贴到微信"></textarea>
         <div class="btns2">
           <button class="act" id="copywenan" disabled>复制文案</button>
-          <button class="act" id="batchwenan">导出勾选文案(txt)</button>
+          <button class="act" id="batchwenan">生成勾选文案（页面显示）</button>
         </div>
       </div>
       <div id="status" class="status"></div>
@@ -220,26 +222,26 @@ function feeTablesHTML(m){
    修改方法：改下面对应代码的 intro（产品简介）或 cat（分类：growth成长/bond债券/broad宽基/pension养老）。
    钩子在 HOOKS 里按分类维护，up=涨日、down=跌日，每天自动轮换一句。 */
 const WENAN_DATA={
-  '020356':{intro:'紧密跟踪中证半导体材料设备主题指数，聚焦设备材料国产替代高景气赛道，捕捉行业高成长弹性，适合看好半导体、能承受波动的进取型投资者。',cat:'growth'},
-  '012098':{intro:'主动成长风格，精选高景气行业中的优质成长龙头，设一年最短持有期以平滑短期波动，力争把握产业成长红利，适合看好成长赛道、能承受波动的进取型投资者。',cat:'growth'},
-  '025423':{intro:'紧密跟踪中证500自由现金流指数，聚焦现金流充沛、经营稳健的中盘价值企业，兼顾质量与成长，适合看好自由现金流策略的稳健投资者。',cat:'broad'},
-  '026897':{intro:'主动精选港股通消费板块优质龙头，把握消费复苏与港股估值修复机遇，适合看好港股消费、能承受波动的进取型投资者。',cat:'growth'},
-  '027692':{intro:'偏债混合（固收+）策略，以债券打底、少量权益增强，严控回撤、力求稳健增值，适合追求稳中有进的中低风险偏好投资者。',cat:'bond'},
-  '019829':{intro:'聚焦数字经济产业链，主动精选数字基建、人工智能、软件应用等数字产业成长龙头，把握产业数字化升级红利，适合看好数字经济长期趋势、能承受波动的成长型投资者。',cat:'growth'},
-  '008585':{intro:'紧密跟踪中证人工智能主题指数，覆盖AI算力、算法与应用产业链，把握人工智能产业浪潮，适合看好AI长期成长、能承受较高波动的进取型投资者。',cat:'growth'},
-  '018345':{intro:'紧密跟踪中证机器人指数，聚焦人形机器人与智能制造产业链，捕捉具身智能新赛道成长机遇，适合看好机器人主题、能承受波动的进取型投资者。',cat:'growth'},
-  '023885':{intro:'紧密跟踪中证金融科技主题指数，聚焦金融IT与数字支付等金融科技龙头，把握金融数字化升级机遇，适合看好金融科技、能承受波动的进取型投资者。',cat:'growth'},
-  '013402':{intro:'紧密跟踪恒生科技指数，覆盖港股互联网与科技龙头，把握中国科技资产价值机遇，适合看好港股科技、能承受波动的进取型投资者。',cat:'growth'},
-  '016708':{intro:'紧密跟踪中证有色金属指数，聚焦工业金属与新能源金属产业链，把握资源品景气周期，适合看好有色板块、能承受波动的进取型投资者。',cat:'growth'},
-  '025542':{intro:'主动把握行业景气轮动，精选高景气度成长行业龙头，力争超额收益，适合追求成长弹性、能承受波动的进取型投资者。',cat:'growth'},
-  '007592':{intro:'坚持价值投资理念，主动精选估值合理、盈利稳健的优质龙头，力争长期稳健增值，适合偏好价值风格的稳健成长型投资者。',cat:'broad'},
-  '001016':{intro:'以沪深300指数为基准的指数增强产品，紧密跟踪宽基指数并力争稳定超额收益，适合看好A股核心资产、追求指数增强收益的投资者。',cat:'broad'},
-  '000071':{intro:'紧密跟踪恒生指数，覆盖港股大盘蓝筹龙头，一键覆盖香港核心资产，适合看好港股龙头的投资者。',cat:'broad'},
-  '004063':{intro:'以中高等级债券为主要投资标的，票息打底、久期灵活，力求稳健收益与较低波动，适合追求稳健的中低风险偏好投资者。',cat:'bond'},
-  '001011':{intro:'以债券投资为主，严选中高等级信用债，力求稳健回报与良好持有体验，适合追求稳健的中低风险偏好投资者。',cat:'bond'},
-  '007667':{intro:'以债券资产为主的固收产品，注重信用风险控制与久期管理，力求平稳收益体验，适合追求稳健的中低风险偏好投资者。',cat:'bond'},
-  '015717':{intro:'固收+稳健策略，以债券打底、少量权益增强，严控回撤、力求稳中有进，适合追求稳健增值的中低风险偏好投资者。',cat:'bond'},
-  '010281':{intro:'养老目标风险（保守型）FOF，设一年最短持有期，多资产分散配置、注重低波稳健，适合养老储备与稳健配置需求的投资者。',cat:'pension'}
+  '020356':{intro:'紧密跟踪中证半导体材料设备主题指数，聚焦设备材料国产替代高景气赛道，捕捉行业高成长弹性，适合看好半导体、能承受波动的进取型投资者。',cat:'growth',up:['半导体设备材料高景气，国产替代加速兑现','设备材料“卡脖子”突围，板块弹性尽显'],down:['半导体短期调整，国产替代长逻辑不改','回调不改设备材料自主可控大势']},
+  '012098':{intro:'主动成长风格，精选高景气行业中的优质成长龙头，设一年最短持有期以平滑短期波动，力争把握产业成长红利，适合看好成长赛道、能承受波动的进取型投资者。',cat:'growth',up:['成长主线活跃，优质龙头弹性释放','一年持有陪伴成长，长期红利可期'],down:['短期波动难改成长赛道长逻辑','一年持有平滑波动，静待成长兑现']},
+  '025423':{intro:'紧密跟踪中证500自由现金流指数，聚焦现金流充沛、经营稳健的中盘价值企业，兼顾质量与成长，适合看好自由现金流策略的稳健投资者。',cat:'broad',up:['自由现金流策略走强，中盘质优价值兑现','现金流为盾，攻守兼备稳步向上'],down:['短期波动，自由现金流策略长期占优','回调之中，高现金流企业更显韧性']},
+  '026897':{intro:'主动精选港股通消费板块优质龙头，把握消费复苏与港股估值修复机遇，适合看好港股消费、能承受波动的进取型投资者。',cat:'growth',up:['港股消费复苏领涨，估值修复正当时','消费龙头齐发力，港股弹性尽显'],down:['港股消费短期回调，复苏趋势不改','回调不改消费升级与估值修复主线']},
+  '027692':{intro:'偏债混合（固收+）策略，以债券打底、少量权益增强，严控回撤、力求稳健增值，适合追求稳中有进的中低风险偏好投资者。',cat:'bond',up:['偏债固收+稳中有进，回撤可控更安心','债券打底权益点睛，稳健增值稳步走'],down:['低波稳健，短期扰动无碍稳增','固收+的从容，回撤面前更显韧性']},
+  '019829':{intro:'聚焦数字经济产业链，主动精选数字基建、人工智能、软件应用等数字产业成长龙头，把握产业数字化升级红利，适合看好数字经济长期趋势、能承受波动的成长型投资者。',cat:'growth',up:['数字经济主线延续，AI+应用加速落地','数字产业龙头发力，成长弹性凸显'],down:['短期波动难改数字经济长期趋势','回调不改产业数字化升级大势']},
+  '008585':{intro:'紧密跟踪中证人工智能主题指数，覆盖AI算力、算法与应用产业链，把握人工智能产业浪潮，适合看好AI长期成长、能承受较高波动的进取型投资者。',cat:'growth',up:['AI浪潮奔涌，算力应用双主线齐飞','人工智能龙头领涨，产业趋势正劲'],down:['AI短期调整，产业革命大势不改','回调不改人工智能长期成长空间']},
+  '018345':{intro:'紧密跟踪中证机器人指数，聚焦人形机器人与智能制造产业链，捕捉具身智能新赛道成长机遇，适合看好机器人主题、能承受波动的进取型投资者。',cat:'growth',up:['人形机器人量产在即，赛道热度飙升','具身智能风口正劲，机器人龙头领涨'],down:['机器人短期调整，产业化大势不改','回调之下，具身智能长期空间广阔']},
+  '023885':{intro:'紧密跟踪中证金融科技主题指数，聚焦金融IT与数字支付等金融科技龙头，把握金融数字化升级机遇，适合看好金融科技、能承受波动的进取型投资者。',cat:'growth',up:['金融科技高歌猛进，数字支付浪潮延续','金融IT龙头发力，板块弹性凸显'],down:['短期波动，金融数字化长逻辑不改','回调不改金融科技成长主线']},
+  '013402':{intro:'紧密跟踪恒生科技指数，覆盖港股互联网与科技龙头，把握中国科技资产价值机遇，适合看好港股科技、能承受波动的进取型投资者。',cat:'growth',up:['港股科技强势反弹，中国资产重估进行时','恒生科技龙头齐发力，弹性尽显'],down:['港科回调，长期成长逻辑依旧','短期波动难改中国科技资产价值']},
+  '016708':{intro:'紧密跟踪中证有色金属指数，聚焦工业金属与新能源金属产业链，把握资源品景气周期，适合看好有色板块、能承受波动的进取型投资者。',cat:'growth',up:['有色金属价格上行，资源品景气升温','工业+新能源金属齐发力，弹性尽显'],down:['有色短期调整，资源周期长逻辑仍在','回调不改新能源金属长期需求']},
+  '025542':{intro:'主动把握行业景气轮动，精选高景气度成长行业龙头，力争超额收益，适合追求成长弹性、能承受波动的进取型投资者。',cat:'growth',up:['精准卡位高景气，行业轮动抢先机','景气赛道龙头领涨，主动超额显威'],down:['短期波动，景气成长长逻辑不改','回调之下，主动择时静待轮动']},
+  '007592':{intro:'坚持价值投资理念，主动精选估值合理、盈利稳健的优质龙头，力争长期稳健增值，适合偏好价值风格的稳健成长型投资者。',cat:'broad',up:['价值风格稳健领跑，优质龙头行情延续','精选低估龙头，价值回归稳步兑现'],down:['短期波动，价值投资更看长期','回调之中，优质龙头性价比凸显']},
+  '001016':{intro:'以沪深300指数为基准的指数增强产品，紧密跟踪宽基指数并力争稳定超额收益，适合看好A股核心资产、追求指数增强收益的投资者。',cat:'broad',up:['宽基走强+增强超额，核心资产双击','沪深300稳步向上，指增超额加成'],down:['指数回踩，指增长期超额可期','短期震荡，A股核心资产价值犹在']},
+  '000071':{intro:'紧密跟踪恒生指数，覆盖港股大盘蓝筹龙头，一键覆盖香港核心资产，适合看好港股龙头的投资者。',cat:'broad',up:['港股蓝筹领涨，恒指估值修复延续','一键覆盖香港核心资产，龙头齐发力'],down:['恒指回踩，港股价值洼地长期可期','短期震荡，蓝筹龙头长期价值犹存']},
+  '004063':{intro:'以中高等级债券为主要投资标的，票息打底、久期灵活，力求稳健收益与较低波动，适合追求稳健的中低风险偏好投资者。',cat:'bond',up:['固收打底稳步向上，回撤可控更安心','债券底仓+权益增强，稳中求进'],down:['低波稳健，短期扰动不改稳增本色','固收+的从容，回撤面前更显韧性']},
+  '001011':{intro:'以债券投资为主，严选中高等级信用债，力求稳健回报与良好持有体验，适合追求稳健的中低风险偏好投资者。',cat:'bond',up:['信用精选票息为盾，净值稳步走高','严选中高等级债，稳健收益可期'],down:['纯债底色稳健，短期波动无碍长跑','低波债基，回撤有度、持有从容']},
+  '007667':{intro:'以债券资产为主的固收产品，注重信用风险控制与久期管理，力求平稳收益体验，适合追求稳健的中低风险偏好投资者。',cat:'bond',up:['债券打底稳步生息，C类免申购更灵活','稳健票息稳稳积累，短持有更便捷'],down:['低波稳健，短期震荡不足虑','纯债韧性，回撤温和']},
+  '015717':{intro:'固收+稳健策略，以债券打底、少量权益增强，严控回撤、力求稳中有进，适合追求稳健增值的中低风险偏好投资者。',cat:'bond',up:['固收+稳步增利，攻守兼备更省心','债券打底权益增强，稳中有进'],down:['低波稳健，短期扰动无碍稳增','固收+韧性，回撤温和更安心']},
+  '010281':{intro:'养老目标风险（保守型）FOF，设一年最短持有期，多资产分散配置、注重低波稳健，适合养老储备与稳健配置需求的投资者。',cat:'pension',up:['多资产分散配置，稳健养老稳步向前','低波前行，养老储备的安稳之选'],down:['保守型养老，低波稳健、抗跌为先','一年持有平滑波动，长期稳健可期']}
 };
 const HOOKS={
   growth:{up:['板块强势领涨，成长逻辑加速兑现','量价齐升，主题热度持续升温','赛道景气高企，龙头弹性尽显'],down:['短期波动难改长期成长逻辑','回调不改产业上行趋势','高成长赛道，长期主线依旧清晰']},
@@ -249,7 +251,7 @@ const HOOKS={
 };
 function catOf(code){return (WENAN_DATA[code]&&WENAN_DATA[code].cat)||'growth';}
 function introOf(code){return (WENAN_DATA[code]&&WENAN_DATA[code].intro)||((typeOf(code)?'本基金为'+typeOf(code)+'基金，':'')+'依据基金合同约定的策略运作，详见基金合同及最新定期报告。');}
-function pickHook(m){const cat=catOf(m.FCODE),dir=m.dayChg>=0?'up':'down';const pool=(HOOKS[cat]||HOOKS.growth)[dir];const idx=Math.floor(m.tdate/86400000)%pool.length;return (m.dayChg>=0?'🚀':'💡')+pool[idx];}
+function pickHook(m){const dir=m.dayChg>=0?'up':'down';const w=WENAN_DATA[m.FCODE];const pool=(w&&w[dir]&&w[dir].length)?w[dir]:(HOOKS[catOf(m.FCODE)]||HOOKS.growth)[dir];const idx=Math.floor(m.tdate/86400000)%pool.length;return (m.dayChg>=0?'🚀':'💡')+pool[idx];}
 function genWenan(m){
   const icon=m.dayChg>=0?'📈':'📉';
   const sp=v=>(v>=0?'+':'')+(v*100).toFixed(2)+'%';
@@ -275,7 +277,7 @@ function summaryRow(d){
   const NAV=d.NAV,L=NAV.length-1,nav=NAV[L].y;
   const rr=off=>{const t=rangeReturn(NAV,L,off);return t?t.r:null;};
   const acv=acOnOrBefore(d.AC,NAV[L].x);
-  return {name:d.FNAME,code:d.FCODE,since:(acv!=null?acv:nav)-1,vals:[7,30,91,182,365,730].map(rr),tdate:NAV[L].x};
+  return {name:d.FNAME,code:d.FCODE,incept:NAV[0].x,since:(acv!=null?acv:nav)-1,vals:[7,30,91,182,365,730].map(rr),tdate:NAV[L].x};
 }
 function renderSummary(rows,tdate){
   const sp=v=>v==null?'--':(v>=0?'+':'')+(v*100).toFixed(2)+'%';
@@ -283,6 +285,7 @@ function renderSummary(rows,tdate){
   const cell=v=>`<td class="${cl(v)}">${sp(v)}</td>`;
   const body=rows.map(r=>`<tr>
       <td class="pn"><b>${r.name}</b><span>${r.code}</span></td>
+      <td class="dt">${fmtDate(r.incept)}</td>
       <td class="strong ${cl(r.since)}">${sp(r.since)}</td>
       ${r.vals.map(cell).join('')}
     </tr>`).join('');
@@ -294,14 +297,14 @@ function renderSummary(rows,tdate){
     </div>
     <div class="sumsec">
       <table class="sumtb">
-        <thead><tr><th class="pn">产品名称</th><th>成立以来</th><th>近1周</th><th>近1月</th><th>近3月</th><th>近6月</th><th>近1年</th><th>近2年</th></tr></thead>
+        <thead><tr><th class="pn">产品名称</th><th>成立日期</th><th>成立以来</th><th>近1周</th><th>近1月</th><th>近3月</th><th>近6月</th><th>近1年</th><th>近2年</th></tr></thead>
         <tbody>${body}</tbody>
       </table>
     </div>
     <div class="foot">数据来源：天天基金；区间收益为费前口径，成立以来＝单位净值/面值−1；标“--”表示成立时间未满该区间。数据截至 ${fmtDate(tdate)}，生成日期 ${fmtDate(Date.now())}。</div>
     <div class="warn">⚠ 风险提示：基金有风险，投资需谨慎。本材料不构成投资建议，基金过往业绩不预示其未来表现。</div>`;
 }
-async function newExport(previewOnly){
+async function newExport(){
   const rows=rowsData(true); if(!rows.length){setStatus('请先勾选至少一只产品','err');return;}
   $('#batch').disabled=$('#preview').disabled=true;
   const models=[]; let tdate=0;
@@ -309,9 +312,8 @@ async function newExport(previewOnly){
     try{ const d=await loadFund(code); models.push(summaryRow(d)); tdate=Math.max(tdate,d.NAV[d.NAV.length-1].x); }catch(e){ setStatus('部分基金抓取失败：'+e,'err'); } }
   if(!models.length){ setStatus('未取到任何数据','err'); $('#batch').disabled=$('#preview').disabled=false; return; }
   renderSummary(models,tdate);
-  if(!previewOnly){ await sleep(160); await capture(`新发产品业绩一览_${fmtDate(tdate)}.png`); }
   $('#batch').disabled=$('#preview').disabled=false;
-  setStatus(previewOnly?'已预览业绩表（点导出保存图片）':'✅ 已导出新发产品业绩图',' ok');
+  setStatus(`✅ 业绩表已在下方生成（共 ${models.length} 只，截至 ${fmtDate(tdate)}）`,'ok');
 }
 let previewCode=null, IDX=null;   // IDX: Map code->[code,py,name,type]
 
@@ -410,13 +412,14 @@ function switchTab(t){
   $$('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   document.querySelector('.pbody').classList.toggle('mode-new',nb);
   const lbl=$('#plabel-txt'); if(lbl) lbl.textContent = nb?'新发产品列表':'基金列表';
-  $('#batch').textContent = nb?'导出新发产品业绩图':'导出勾选 PNG';
-  $('#preview').textContent = nb?'预览业绩表':'预览首只';
+  $('#batch').textContent = nb?'生成 / 刷新 业绩表':'导出勾选 PNG';
+  $('#preview').textContent = nb?'刷新':'预览首只';
   $('#fundlist').innerHTML=''; initRows();
   const pa=$('#pickall'); if(pa) pa.checked=true;
-  $('#card').innerHTML = nb?'<div class="empty">勾选产品后点「预览业绩表 / 导出新发产品业绩图」</div>':'<div class="empty">添加基金代码后点击「预览首只」</div>';
+  $('#card').innerHTML = nb?'<div class="empty">正在生成业绩表…</div>':'<div class="empty">添加基金代码后点击「预览首只」</div>';
   $('#wenan').value=''; $('#png').disabled=true; $('#copywenan').disabled=true; previewCode=null;
   setStatus('',' ');
+  if(nb) newExport();     // 新发标签自动展示业绩表
 }
 $('#add').onclick=()=>{ addRow(); };
 
@@ -546,10 +549,10 @@ async function capture(fname){
   const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);ctx.setTransform(scale,0,0,scale,0,0);ctx.drawImage(img,0,0);
   dl(cv,fname);
 }
-$('#preview').onclick=()=>activeTab==='new'?newExport(true):preview();
+$('#preview').onclick=()=>activeTab==='new'?newExport():preview();
 $('#png').onclick=()=>{ if(previewCode&&cache[previewCode]){ const d=cache[previewCode]; capture(`${previewCode}_每日申购追踪_${fmtDate(d.NAV[d.NAV.length-1].x)}.png`);} };
 $('#batch').onclick=async()=>{
-  if(activeTab==='new'){ return newExport(false); }
+  if(activeTab==='new'){ return newExport(); }
   const rows=rowsData(true); if(!rows.length){setStatus('请先勾选至少一只产品','err');return;}
   $('#batch').disabled=$('#preview').disabled=true; let ok=0;
   for(let i=0;i<rows.length;i++){
@@ -573,10 +576,8 @@ $('#batchwenan').onclick=async()=>{
   $('#batchwenan').disabled=true; const parts=[]; let ok=0;
   for(let i=0;i<rows.length;i++){ const {code,start,end}=rows[i]; setStatus(`生成文案 ${i+1}/${rows.length}：${code} …`,'');
     try{ const d=await loadFund(code); parts.push(genWenan(computeModel(d,start,end))); ok++; }catch(e){ parts.push(`【${code}】生成失败：${e}`); } }
-  const blob=new Blob([parts.join('\n\n\n')],{type:'text/plain;charset=utf-8'});
-  const a=document.createElement('a'); a.download=`微信播报文案_${fmtDate(Date.now())}.txt`; a.href=URL.createObjectURL(blob); a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
-  $('#batchwenan').disabled=false; setStatus(`✅ 已生成 ${ok}/${rows.length} 条文案（见下载的 txt）`,'ok');
+  $('#wenan').value=parts.join('\n\n────────────\n\n'); $('#copywenan').disabled=false;
+  $('#batchwenan').disabled=false; setStatus(`✅ 已生成 ${ok}/${rows.length} 条文案（下方显示，可直接复制）`,'ok');
 };
 
 // 标签页切换 + 全选
