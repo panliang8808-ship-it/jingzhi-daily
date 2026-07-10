@@ -104,8 +104,6 @@
   .ranges .rb-up{border-top-color:#d98f8f}
   .ranges .rb-down{border-top-color:#8fc7ad}
   .sparkfoot{display:flex;justify-content:space-between;font-size:11.5px;color:#9aa3b5;margin-top:6px;padding:0 2px}
-  tbody tr.best td{background:#fdf8ec !important}
-  .besttag{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:700;color:#a9812f;background:#f7edd3;border:1px solid #e8d5a3;border-radius:4px;padding:1px 6px;vertical-align:1px}
   table{width:100%;border-collapse:collapse;font-size:14.5px}
   thead th{background:linear-gradient(180deg,#243352,#1b284a);color:#eaf0fb;font-weight:600;padding:14px 10px;text-align:center;font-size:13.5px;letter-spacing:.5px}
   thead th:first-child{border-top-left-radius:8px}thead th:last-child{border-top-right-radius:8px}
@@ -572,10 +570,9 @@ function renderCard(m){
   const rangeHTML=m.ranges.map(r=>r.r==null
     ?`<div class="r"><div class="rl">${r.l}</div><div class="rv">--</div><div class="ra"></div></div>`
     :`<div class="r ${r.r>=0?'rb-up':'rb-down'}"><div class="rl">${r.l}</div><div class="rv ${cls(r.r)}">${pct(r.r)}</div><div class="ra">年化 <span class="an ${cls(r.ann)}">${pctBig(r.ann)}</span></div></div>`).join('');
-  let bi=-1,bv=-Infinity; if(m.subs.length>1)m.subs.forEach((s,i)=>{if(s.ann>bv){bv=s.ann;bi=i;}});
-  const rowsHTML=m.subs.length? m.subs.map((s,i)=>{
+  const rowsHTML=m.subs.length? m.subs.map(s=>{
     const w=Math.max(6,Math.round(Math.abs(s.ann)/m.maxAbs*100));
-    return `<tr${i===bi?' class="best"':''}><td>${fmtDate(s.date)}${i===bi?'<span class="besttag">最佳</span>':''}</td><td>${s.sn.toFixed(4)}</td><td>${s.held}</td>
+    return `<tr><td>${fmtDate(s.date)}</td><td>${s.sn.toFixed(4)}</td><td>${s.held}</td>
       <td class="${cls(s.dchg)}">${pct(s.dchg)}</td><td class="strong ${cls(s.ret)}">${pct(s.ret)}</td>
       <td><span class="annual"><span class="v ${cls(s.ann)}">${pctBig(s.ann)}</span><span class="track2"><span class="fill ${bgcls(s.ann)}" style="width:${w}%"></span></span></span></td></tr>`;
   }).join('') : `<tr><td colspan="6" style="color:#9aa3b5">所选起始日期区间内暂无申购日，请把起始日期往前调</td></tr>`;
@@ -599,9 +596,9 @@ function renderCard(m){
       <div class="right"><div class="track">每日申购追踪</div><div class="trackdate">${fmtDate(m.tdate)}${cnWeek(m.tdate)}</div></div>
     </div>
     <div class="kpis">
-      <div class="kpi"><div class="lab">单位净值</div><div class="big">${m.nav.toFixed(4)}</div></div>
+      <div class="kpi"><div class="lab">基金代码</div><div class="big">${m.FCODE}</div></div>
       <div class="kpi"><div class="lab">日涨幅</div><div class="chg ${bgcls(m.dayChg)}">${pct(m.dayChg)}</div></div>
-      <div class="kpi"><div class="lab">累计净值</div><div class="big">${m.acnav.toFixed(4)}</div></div>
+      <div class="kpi"><div class="lab">单位净值</div><div class="big">${m.nav.toFixed(4)}</div></div>
     </div>
     ${sparkHTML}
     <div class="sec"><div class="sec-t"><span class="bar"></span><b>区间收益表现</b><span>（费前口径）</span><span class="rule"></span></div><div class="ranges">${rangeHTML}</div></div>
@@ -611,7 +608,7 @@ function renderCard(m){
     </div>
     <div class="sec" style="padding-bottom:4px"><div class="sec-t"><span class="bar"></span><b>费率结构</b><span class="rule"></span></div></div>
     ${feeTablesHTML(m)}
-    <div class="foot">数据来源：天天基金网，截至 ${fmtDate(m.tdate)}；收益率为费前口径；年化收益率为模拟测算值（持有期收益率按 365 天折算，仅供参考），不代表未来表现。${bi>=0?'浅金色行＝区间内费前年化最高的申购日。':''}生成日期：${fmtDate(Date.now())}。</div>
+    <div class="foot">数据来源：天天基金网，截至 ${fmtDate(m.tdate)}；收益率为费前口径；年化收益率为模拟测算值（持有期收益率按 365 天折算，仅供参考），不代表未来表现。生成日期：${fmtDate(Date.now())}。</div>
     <div class="warn">⚠ 风险提示：基金有风险，投资需谨慎。本材料不构成投资建议，基金过往业绩不预示其未来表现。</div>`;
   if(sparkHTML)drawSpark(pts);
 }
