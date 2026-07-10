@@ -196,12 +196,12 @@
         <button class="act" id="oneclick">⚡ 一键生成 图＋文案</button>
         <button class="act" id="batch">导出勾选 PNG</button>
         <button class="act" id="batchwenan">仅生成文案</button>
-        <button class="act" id="preview">预览首只</button>
+        <button class="act" id="preview">预览勾选产品</button>
         <button class="act" id="png" disabled>导出当前 PNG</button>
       </div>
       <div class="wenan-wrap">
         <div class="plabel"><span class="bar"></span>微信播报文案 <span class="cnt">生成后可一键复制发群</span></div>
-        <textarea id="wenan" readonly placeholder="点击「一键生成」或「预览首只」后，这里出现微信播报文案（含数据钩子、区间业绩、产品简介），可直接复制粘贴到微信"></textarea>
+        <textarea id="wenan" readonly placeholder="点击「一键生成」或「预览勾选产品」后，这里出现微信播报文案（含数据钩子、区间业绩、产品简介），可直接复制粘贴到微信"></textarea>
         <div class="btns2">
           <button class="act" id="copywenan" disabled>复制文案</button>
         </div>
@@ -211,7 +211,7 @@
     </div>
   </div>
 
-  <div class="cardwrap"><div id="card"><div class="empty">添加基金代码后点击「预览首只」</div></div></div>
+  <div class="cardwrap"><div id="card"><div class="empty">勾选基金后点击「预览勾选产品」</div></div></div>
 </div>
 
 <script>
@@ -526,10 +526,10 @@ function switchTab(t){
   document.querySelector('.pbody').classList.toggle('mode-new',nb);
   const lbl=$('#plabel-txt'); if(lbl) lbl.textContent = nb?'新发产品列表':'基金列表';
   $('#batch').textContent = nb?'生成 / 刷新 业绩表':'导出勾选 PNG';
-  $('#preview').textContent = nb?'刷新':'预览首只';
+  $('#preview').textContent = nb?'刷新':'预览勾选产品';
   $('#fundlist').innerHTML=''; initRows();
   const pa=$('#pickall'); if(pa) pa.checked=true;
-  $('#card').innerHTML = nb?'<div class="empty">正在生成业绩表…</div>':'<div class="empty">添加基金代码后点击「预览首只」</div>';
+  $('#card').innerHTML = nb?'<div class="empty">正在生成业绩表…</div>':'<div class="empty">勾选基金后点击「预览勾选产品」</div>';
   $('#wenan').value=''; $('#png').disabled=true; $('#copywenan').disabled=true; previewCode=null;
   setStatus('',' ');
   if(nb) newExport();     // 新发标签自动展示业绩表
@@ -681,7 +681,7 @@ function setStatus(t,c){const el=$('#status');el.textContent=t;el.className='sta
 function rowsData(onlyChecked){ return $$('#fundlist .fund-row').map(r=>({code:r.querySelector('.code').value.trim(),start:r.querySelector('.start').value,end:r.querySelector('.end').value,checked:r.querySelector('.pick').checked})).filter(x=>/^\d{6}$/.test(x.code) && (!onlyChecked||x.checked)); }
 
 async function preview(){
-  const rows=rowsData(); if(!rows.length){setStatus('请至少填一个有效的6位基金代码','err');return;}
+  const rows=rowsData(true); if(!rows.length){setStatus('请先勾选至少一只产品（需为6位基金代码）','err');return;}
   const {code,start,end}=rows[0]; setStatus('抓取中…','');
   try{ const d=await loadFund(code); previewCode=code;
     const m=computeModel(d,start,end); renderCard(m);
