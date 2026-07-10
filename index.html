@@ -47,8 +47,17 @@
   .add:hover{background:#eaf0fb;border-color:#9fb2df}
   .btns{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}
   button.act{border:1px solid transparent;border-radius:9px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
-  #batch{background:linear-gradient(135deg,#26365a,#19233d);color:#fff;flex:1;min-width:170px}
+  #oneclick{background:linear-gradient(135deg,#b98f3e,#cda24f);color:#fff;flex:1.5;min-width:210px;box-shadow:0 2px 10px rgba(185,143,62,.35);letter-spacing:.5px}
+  #oneclick:hover{background:linear-gradient(135deg,#a9812f,#bd9240)}
+  #batch{background:linear-gradient(135deg,#26365a,#19233d);color:#fff;flex:1;min-width:150px}
   #batch:hover{background:#1a2846}
+  .quickbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 13px;padding:10px 13px;background:#f6f8fc;border:1px solid #eef1f6;border-radius:10px}
+  .quickbar .qlab{font-size:12px;font-weight:700;color:var(--navy2);letter-spacing:.3px}
+  .quickbar .chip{border:1px solid #d7dce6;background:#fff;color:#3b4763;border-radius:999px;padding:6px 14px;font-size:12px;cursor:pointer;transition:.15s}
+  .quickbar .chip:hover{border-color:var(--navy);color:var(--navy);background:#f4f7fd}
+  .quickbar .qtip{font-size:11px;color:var(--muted);margin-left:auto}
+  .note summary{cursor:pointer;font-weight:600;color:#6b7688;font-size:12px;list-style-position:inside}
+  .mode-new #oneclick,.mode-new .quickbar,.mode-new #batchwenan{display:none}
   #preview{background:#fff;color:var(--navy);border-color:#c6d0e4}
   #preview:hover{background:#f4f7fd}
   #png{background:#fff;color:#a9812f;border-color:#e4cf9c}
@@ -153,7 +162,7 @@
     .btns{flex-direction:column;gap:8px}
     button.act{width:100%}
     .btns2{flex-direction:column}
-    #batch,#preview,#png{flex:none}
+    #oneclick,#batch,#batchwenan,#preview,#png{flex:none;min-width:0}
     #wenan{height:260px;font-size:12.5px}
   }
 </style>
@@ -169,27 +178,36 @@
         <button class="tab on" data-t="main">全部产品 · 每日追踪</button>
         <button class="tab" data-t="new">新发产品追踪</button>
       </div>
-      <div class="sub">每只基金可单独设置申购起始/截止日期（截止日可空=最新净值日）；左侧勾选框决定导出范围。配置自动保存在本地。</div>
+      <div class="sub"><b>① 勾选产品　② 设置申购起始日（可用快捷按钮）　③ 一键生成图和文案</b>　·　配置自动保存在本地，截止日可空＝最新净值日。</div>
       <div id="idxtip" class="idxtip">正在加载基金检索库（用于代码联想 / 类型识别）…</div>
       <div class="plabel"><span class="bar"></span><span id="plabel-txt">基金列表</span> <span class="cnt" id="fcnt"></span></div>
+      <div class="quickbar">
+        <span class="qlab">快捷起始日期</span>
+        <button class="chip" data-q="d5">近5日（默认）</button>
+        <button class="chip" data-q="week">本周一</button>
+        <button class="chip" data-q="month">本月初</button>
+        <button class="chip" data-q="clear">清空截止日</button>
+        <span class="qtip">应用于已勾选产品</span>
+      </div>
       <div class="rhead"><span class="pk"><input type="checkbox" id="pickall" checked title="全选/全不选"></span><span>基金代码（输入可联想名称）</span><span>申购起始日期</span><span>申购截止日（可空=最新）</span><span></span></div>
       <div id="fundlist"></div>
       <button class="add" id="add">＋ 添加基金</button>
       <div class="btns">
+        <button class="act" id="oneclick">⚡ 一键生成 图＋文案</button>
         <button class="act" id="batch">导出勾选 PNG</button>
+        <button class="act" id="batchwenan">仅生成文案</button>
         <button class="act" id="preview">预览首只</button>
         <button class="act" id="png" disabled>导出当前 PNG</button>
       </div>
       <div class="wenan-wrap">
-        <div class="plabel"><span class="bar"></span>微信播报文案 <span class="cnt">预览后自动生成，可复制发群</span></div>
-        <textarea id="wenan" readonly placeholder="点击「预览首只」后，这里生成该基金的微信播报文案（含涨跌图标、营销钩子、产品简介），可直接复制粘贴到微信"></textarea>
+        <div class="plabel"><span class="bar"></span>微信播报文案 <span class="cnt">生成后可一键复制发群</span></div>
+        <textarea id="wenan" readonly placeholder="点击「一键生成」或「预览首只」后，这里出现微信播报文案（含数据钩子、区间业绩、产品简介），可直接复制粘贴到微信"></textarea>
         <div class="btns2">
           <button class="act" id="copywenan" disabled>复制文案</button>
-          <button class="act" id="batchwenan">生成勾选文案（页面显示）</button>
         </div>
       </div>
       <div id="status" class="status"></div>
-      <div class="note">数据来源：天天基金公开接口（浏览器内脚本加载，需联网）。区间年化＝(1+区间收益)^(365/天数)−1（复利）；每日申购年化＝申购收益率×365/持有天数（单利）。红涨绿跌。费率分档表（申购/赎回）已按各产品预置在文件顶部的 FEE_DATA 配置中，如需修改直接编辑该处即可，全部产品同步生效。</div>
+      <details class="note"><summary>数据口径与说明</summary>数据来源：天天基金公开接口（浏览器内脚本加载，需联网）。区间年化＝(1+区间收益)^(365/天数)−1（复利）；每日申购年化＝申购收益率×365/持有天数（单利）。红涨绿跌。费率分档表（申购/赎回）已按各产品预置在文件顶部的 FEE_DATA 配置中，如需修改直接编辑该处即可，全部产品同步生效。</details>
     </div>
   </div>
 
@@ -235,6 +253,7 @@ function feeTablesHTML(m){
      每天随数据自然变化，平实可信；当天没有亮点时，才轮换下方 HOOKS 平实句库。
    ▶ WENAN_DATA 里旧的 up[]/down[] 字段已不再使用（保留不影响运行，可择机删除瘦身）。 */
 const WENAN_DATA={
+  '010014':{intro:'二级债基，以利率债与中高等级信用债构建票息底仓，辅以不超过两成的权益仓位增强收益，业绩基准为中债综合指数收益率×80%+沪深300指数收益率×20%；成立于2020年12月，由资深固收基金经理柳万军管理，追求严控风险下的长期稳健增值，适合稳中求进的中低风险偏好投资者。',cat:'bond'},
   '020356':{intro:'紧密跟踪中证半导体材料设备主题指数，聚焦设备材料国产替代高景气赛道，捕捉行业高成长弹性，适合看好半导体、能承受波动的进取型投资者。',cat:'growth',up:['半导体设备材料高景气，国产替代加速兑现','设备材料“卡脖子”突围，板块弹性尽显'],down:['半导体短期调整，国产替代长逻辑不改','回调不改设备材料自主可控大势']},
   '012098':{intro:'主动成长风格，精选高景气行业中的优质成长龙头，设一年最短持有期以平滑短期波动，力争把握产业成长红利，适合看好成长赛道、能承受波动的进取型投资者。',cat:'growth',up:['成长主线活跃，优质龙头弹性释放','一年持有陪伴成长，长期红利可期'],down:['短期波动难改成长赛道长逻辑','一年持有平滑波动，静待成长兑现']},
   '025423':{intro:'紧密跟踪中证500自由现金流指数，聚焦现金流充沛、经营稳健的中盘价值企业，兼顾质量与成长，适合看好自由现金流策略的稳健投资者。',cat:'broad',up:['自由现金流策略走强，中盘质优价值兑现','现金流为盾，攻守兼备稳步向上'],down:['短期波动，自由现金流策略长期占优','回调之中，高现金流企业更显韧性']},
@@ -265,7 +284,23 @@ const HOOKS={
   pension:{up:['养老钱今天又多了一点','慢慢涨，正是它该有的样子','稳字当头，今天继续小步向前','不求快，今天又稳稳收了一天','低波动小幅上行，一切如常'],down:['今天小幅波动，属正常范围','养老投资看长期，单日仅供参考','波动很小，不必在意','偶尔回调，长跑节奏不变','今天微跌，回撤控制依旧在线']}
 };
 function catOf(code){return (WENAN_DATA[code]&&WENAN_DATA[code].cat)||'growth';}
-function introOf(code){return (WENAN_DATA[code]&&WENAN_DATA[code].intro)||((typeOf(code)?'本基金为'+typeOf(code)+'基金，':'')+'依据基金合同约定的策略运作，详见基金合同及最新定期报告。');}
+/* 简介兜底：未在 WENAN_DATA 中登记的产品，按基金类型给出专业模板简介（不再出现"详见基金合同"） */
+const INTRO_TPL=[
+  [/中短债|短债/,'中短债产品，聚焦剩余期限较短的利率债与中高等级信用债，波动与回撤控制优先，力求平稳的票息回报，适合闲钱理财与低风险偏好投资者。'],
+  [/混合二级/,'二级债基，以债券票息打底、辅以少量权益仓位增强收益，攻守兼备、力求稳中有进，适合中低风险偏好投资者。'],
+  [/混合一级/,'一级债基，以债券投资为主、可参与可转债等品种增强收益，力求稳健增值，适合中低风险偏好投资者。'],
+  [/债券型|纯债/,'债券型产品，以利率债与中高等级信用债为主要投资标的，通过久期与券种配置力求稳健票息回报，适合追求低波稳健的投资者。'],
+  [/QDII/,'QDII产品，投资于海外市场相关资产，是全球化资产配置的便捷工具，适合看好海外市场、能承受汇率与市场波动的投资者。'],
+  [/联接|ETF|指数型/,'指数化产品，紧密跟踪标的指数，仓位透明、风格稳定、费率较低，是把握对应板块行情的高效配置工具，适合看好该方向的投资者。'],
+  [/FOF|养老/,'基金中基金（FOF），通过多资产、多基金的分散配置平滑单一资产波动，力求长期稳健增值，适合注重持有体验的稳健配置型投资者。'],
+  [/混合型|股票型/,'主动权益产品，依托公司投研平台自下而上精选优质个股，力争创造超越业绩基准的长期回报，适合能承受净值波动的投资者。']
+];
+function introOf(code){
+  const w=WENAN_DATA[code]; if(w&&w.intro) return w.intro;
+  const t=typeOf(code)||'';
+  for(const [re,txt] of INTRO_TPL){ if(re.test(t)) return txt; }
+  return '本产品依据既定投资策略规范运作，追求与其风险等级相匹配的长期回报，具体以基金法律文件及最新定期报告为准。';
+}
 /* —— 平实钩子引擎：从净值数据里找当天的真实亮点，找不到再用 HOOKS 句库 —— */
 function hookPool(m){
   const NAV=m.NAVref||[],L=NAV.length-1,up=m.dayChg>=0;
@@ -700,6 +735,38 @@ $('#batchwenan').onclick=async()=>{
     try{ const d=await loadFund(code); parts.push(genWenan(computeModel(d,start,end))); ok++; }catch(e){ parts.push(`【${code}】生成失败：${e}`); } }
   $('#wenan').value=parts.join('\n\n────────────\n\n'); $('#copywenan').disabled=false;
   $('#batchwenan').disabled=false; setStatus(`✅ 已生成 ${ok}/${rows.length} 条文案（下方显示，可直接复制）`,'ok');
+};
+
+// 快捷起始日期（应用于勾选产品）
+$$('.quickbar .chip').forEach(b=>b.onclick=()=>{
+  const q=b.dataset.q; let n=0;
+  $$('#fundlist .fund-row').forEach(r=>{
+    if(!r.querySelector('.pick').checked) return; n++;
+    if(q==='clear'){ r.querySelector('.end').value=''; return; }
+    const s=r.querySelector('.start');
+    if(q==='d5') s.value='';
+    else if(q==='week'){ const d=new Date(); d.setDate(d.getDate()-((d.getDay()+6)%7)); s.value=fmtDate(d.getTime()); }
+    else if(q==='month'){ const d=new Date(); s.value=fmtDate(new Date(d.getFullYear(),d.getMonth(),1).getTime()); }
+  });
+  saveCfg(); setStatus(n?`已应用到 ${n} 只勾选产品`:'请先勾选产品', n?'ok':'err');
+});
+
+// 一键生成：勾选产品逐只 导出PNG + 汇总文案
+$('#oneclick').onclick=async()=>{
+  if(activeTab==='new') return newExport();
+  const rows=rowsData(true); if(!rows.length){setStatus('请先勾选至少一只产品','err');return;}
+  const bs=['#oneclick','#batch','#preview','#batchwenan']; bs.forEach(s=>{const e=$(s);if(e)e.disabled=true;});
+  const parts=[]; let ok=0;
+  for(let i=0;i<rows.length;i++){
+    const {code,start,end}=rows[i]; setStatus(`一键生成 ${i+1}/${rows.length}：${code} …`,'');
+    try{ const d=await loadFund(code); const m=computeModel(d,start,end);
+      renderCard(m); await sleep(140); await capture(`${code}_每日申购追踪_${fmtDate(m.tdate)}.png`);
+      parts.push(genWenan(m)); ok++; await sleep(420);
+    }catch(e){ parts.push(`【${code}】生成失败：${e}`); await sleep(500); }
+  }
+  $('#wenan').value=parts.join('\n\n────────────\n\n'); $('#copywenan').disabled=!parts.length;
+  bs.forEach(s=>{const e=$(s);if(e)e.disabled=false;});
+  setStatus(`✅ 一键完成：图 ${ok}/${rows.length} 张已下载（见浏览器下载），文案已生成在下方`,'ok');
 };
 
 // 标签页切换 + 全选
