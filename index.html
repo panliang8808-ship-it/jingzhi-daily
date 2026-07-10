@@ -28,7 +28,7 @@
   .pick,#pickall{width:16px;height:16px;cursor:pointer;accent-color:var(--navy);margin:0}
   .tabs{display:flex;gap:6px;background:#eef1f6;padding:4px;border-radius:11px;margin-bottom:16px}
   .tab{flex:1;border:none;background:transparent;padding:10px 12px;border-radius:8px;font-size:13.5px;font-weight:600;color:#6b7688;cursor:pointer;transition:.15s}
-  .tab.on{background:#fff;color:var(--navy);box-shadow:0 1px 4px rgba(20,30,60,.1)}
+  .tab.on{background:#fff;color:var(--navy);box-shadow:0 1px 4px rgba(20,30,60,.1),inset 0 -2px 0 var(--gold)}
   .tab:hover:not(.on){color:var(--navy)}
   .fund-row{display:flex;gap:8px;align-items:center;margin-bottom:9px}
   .ac-wrap{position:relative;flex:2;min-width:150px}
@@ -47,7 +47,7 @@
   .add:hover{background:#eaf0fb;border-color:#9fb2df}
   .btns{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}
   button.act{border:1px solid transparent;border-radius:9px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
-  #batch{background:var(--navy);color:#fff;flex:1;min-width:170px}
+  #batch{background:linear-gradient(135deg,#26365a,#19233d);color:#fff;flex:1;min-width:170px}
   #batch:hover{background:#1a2846}
   #preview{background:#fff;color:var(--navy);border-color:#c6d0e4}
   #preview:hover{background:#f4f7fd}
@@ -66,7 +66,7 @@
   #card{width:1000px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 12px 38px rgba(20,30,60,.13),0 2px 8px rgba(20,30,60,.06);margin:0 auto;border:1px solid #eef1f6}
   #card *{font-variant-numeric:tabular-nums}
   .topbar{height:4px;background:linear-gradient(90deg,var(--gold),#b98f3e 55%,#8f6e2f)}
-  .head{background:linear-gradient(135deg,#26365a 0%,#19233d 100%);color:#fff;padding:30px 40px 26px;display:flex;justify-content:space-between;align-items:flex-start}
+  .head{background:linear-gradient(135deg,#26365a 0%,#19233d 100%);color:#fff;padding:30px 40px 26px;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid rgba(205,162,79,.4)}
   .head .name{font-size:26px;font-weight:800;letter-spacing:.3px;display:flex;align-items:center;gap:13px;flex-wrap:wrap;line-height:1.25}
   .code{background:#fff;color:var(--navy2);font-size:14px;font-weight:700;border-radius:5px;padding:3px 11px;letter-spacing:1px;box-shadow:0 1px 3px rgba(0,0,0,.18)}
   .subtype{margin-top:12px;font-size:13.5px;color:#9db0d2;letter-spacing:.4px}
@@ -98,6 +98,14 @@
   .ranges .rv{font-size:22px;font-weight:800;margin-bottom:6px;line-height:1}
   .ranges .ra{font-size:11.5px;color:#9aa3b5}.ranges .ra .an{font-weight:700}
   .up{color:var(--up)}.down{color:var(--down)}.bg-up{background:var(--up)}.bg-down{background:var(--down)}
+  /* ===== 卡片精修：数字字体 / 区间盒顶部色条 / 净值走势小图 / 最佳申购日高亮 ===== */
+  #card .kpi .big,#card .chg,#card .ranges .rv,#card .annual .v{font-family:'DIN Alternate','Bahnschrift','Helvetica Neue',-apple-system,'PingFang SC',sans-serif;letter-spacing:.2px}
+  .ranges .r{border-top:3px solid #e3e8f1}
+  .ranges .rb-up{border-top-color:#d98f8f}
+  .ranges .rb-down{border-top-color:#8fc7ad}
+  .sparkfoot{display:flex;justify-content:space-between;font-size:11.5px;color:#9aa3b5;margin-top:6px;padding:0 2px}
+  tbody tr.best td{background:#fdf8ec !important}
+  .besttag{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:700;color:#a9812f;background:#f7edd3;border:1px solid #e8d5a3;border-radius:4px;padding:1px 6px;vertical-align:1px}
   table{width:100%;border-collapse:collapse;font-size:14.5px}
   thead th{background:linear-gradient(180deg,#243352,#1b284a);color:#eaf0fb;font-weight:600;padding:14px 10px;text-align:center;font-size:13.5px;letter-spacing:.5px}
   thead th:first-child{border-top-left-radius:8px}thead th:last-child{border-top-right-radius:8px}
@@ -222,9 +230,12 @@ function feeTablesHTML(m){
   </div>`;
 }
 
-/* ★★★ 微信播报文案：产品简介 + 分类（钩子按分类 + 涨/跌语气轮换）★★★
+/* ★★★ 微信播报文案：产品简介 + 分类 ★★★
    修改方法：改下面对应代码的 intro（产品简介）或 cat（分类：growth成长/bond债券/broad宽基/pension养老）。
-   钩子在 HOOKS 里按分类维护，up=涨日、down=跌日，每天自动轮换一句。 */
+   ▶ 钩子已升级为「数据事实引擎」（见 hookPool）：优先从真实净值算出当天的亮点做开头——
+     创X新高 / 连涨N天 / 本月N天涨了M天 / 近一月最大单日涨幅 / 悄悄涨了X% / 回调后比高点便宜X% 等，
+     每天随数据自然变化，平实可信；当天没有亮点时，才轮换下方 HOOKS 平实句库。
+   ▶ WENAN_DATA 里旧的 up[]/down[] 字段已不再使用（保留不影响运行，可择机删除瘦身）。 */
 const WENAN_DATA={
   '020356':{intro:'紧密跟踪中证半导体材料设备主题指数，聚焦设备材料国产替代高景气赛道，捕捉行业高成长弹性，适合看好半导体、能承受波动的进取型投资者。',cat:'growth',up:['半导体设备材料高景气，国产替代加速兑现','设备材料“卡脖子”突围，板块弹性尽显'],down:['半导体短期调整，国产替代长逻辑不改','回调不改设备材料自主可控大势']},
   '012098':{intro:'主动成长风格，精选高景气行业中的优质成长龙头，设一年最短持有期以平滑短期波动，力争把握产业成长红利，适合看好成长赛道、能承受波动的进取型投资者。',cat:'growth',up:['成长主线活跃，优质龙头弹性释放','一年持有陪伴成长，长期红利可期'],down:['短期波动难改成长赛道长逻辑','一年持有平滑波动，静待成长兑现']},
@@ -250,14 +261,74 @@ const WENAN_DATA={
   '027193':{intro:'聚焦中小盘成长，自下而上挖掘人工智能、半导体等新兴科技领域优质成长股，力争超越业绩比较基准、实现长期成长增值，适合看好中小盘成长、能承受波动的进取型投资者。',cat:'growth',up:['中小盘成长发力，科技新锐弹性释放','精选成长黑马，超额收益稳步兑现'],down:['短期波动难改中小盘成长长逻辑','回调之中，优质成长更显性价比']}
 };
 const HOOKS={
-  growth:{up:['板块强势领涨，成长逻辑加速兑现','量价齐升，主题热度持续升温','赛道景气高企，龙头弹性尽显'],down:['短期波动难改长期成长逻辑','回调不改产业上行趋势','高成长赛道，长期主线依旧清晰']},
-  bond:{up:['净值稳步向上，持有体验从容','稳健上行，票息价值稳稳兑现','攻守兼备，稳中有进'],down:['低波稳健，短期扰动无碍长期','债市短震，稳健底色不改','回撤可控，稳字当头']},
-  broad:{up:['核心资产走强，蓝筹稳步向上','指数发力，龙头引领上行','估值修复行情延续'],down:['短期震荡，核心资产长期价值犹在','指数回踩，长期逻辑不改','波动之中更显从容']},
-  pension:{up:['稳健向上，长期复利可期','低波前行，稳中有进','稳字当头，力争穿越周期'],down:['低波稳健，短期波动不足虑','养老长跑，稳健为先','控回撤、求稳健，静待时间价值']}
+  growth:{up:['今天涨得不错，数据放在下面了','不吹不黑，今天这个涨幅可以看看','涨了，具体涨多少，往下看','今天行情不错，照例发一下净值','持有的朋友，今天可以看看账户'],down:['今天跌了，跌多少如实放在下面','回调了，净值比昨天便宜','跌的日子也照发，数据不挑日子','今天绿了，数据自己看，逻辑没变','调整日，适合把数据看仔细']},
+  bond:{up:['不声不响，今天又涨了一点','还是熟悉的节奏，稳稳地涨','今天也是安稳的一天','一天一小步，积少成多','波动不大，收益照攒'],down:['今天小幅回调，波动很小','偶尔歇一天，不影响长期节奏','跌幅很小，具体看下面','债基的回调通常不大，数据为证','今天微跌，持有体验依旧平稳']},
+  broad:{up:['指数涨，它也涨，今天如数奉上','大盘给面子，净值跟上了','今天核心资产表现不错','涨了多少，第一行就是','跟着指数慢慢赚，今天又进一步'],down:['指数回调，如实播报','今天跌了，但位置更便宜了','大盘歇脚，数据照发','回调日，反而值得多看一眼','跌了就是跌了，看数据说话']},
+  pension:{up:['养老钱今天又多了一点','慢慢涨，正是它该有的样子','稳字当头，今天继续小步向前','不求快，今天又稳稳收了一天','低波动小幅上行，一切如常'],down:['今天小幅波动，属正常范围','养老投资看长期，单日仅供参考','波动很小，不必在意','偶尔回调，长跑节奏不变','今天微跌，回撤控制依旧在线']}
 };
 function catOf(code){return (WENAN_DATA[code]&&WENAN_DATA[code].cat)||'growth';}
 function introOf(code){return (WENAN_DATA[code]&&WENAN_DATA[code].intro)||((typeOf(code)?'本基金为'+typeOf(code)+'基金，':'')+'依据基金合同约定的策略运作，详见基金合同及最新定期报告。');}
-function pickHook(m){const dir=m.dayChg>=0?'up':'down';const w=WENAN_DATA[m.FCODE];const pool=(w&&w[dir]&&w[dir].length)?w[dir]:(HOOKS[catOf(m.FCODE)]||HOOKS.growth)[dir];const idx=Math.floor(m.tdate/86400000)%pool.length;return (m.dayChg>=0?'🚀':'💡')+pool[idx];}
+/* —— 平实钩子引擎：从净值数据里找当天的真实亮点，找不到再用 HOOKS 句库 —— */
+function hookPool(m){
+  const NAV=m.NAVref||[],L=NAV.length-1,up=m.dayChg>=0;
+  const fallback=(HOOKS[catOf(m.FCODE)]||HOOKS.growth)[up?'up':'down'];
+  if(L<1) return fallback;
+  const chg=i=>{const p=NAV[i];return p.e!=null?p.e/100:(i>0?p.y/NAV[i-1].y-1:0);};
+  const pm=v=>(v>=0?'+':'')+(v*100).toFixed(2)+'%';
+  const pa=v=>(Math.abs(v)*100).toFixed(2)+'%';
+  const cands=[];
+  // 连涨/连跌天数（含最新一日）
+  let st=0;
+  if(m.dayChg>0){st=1;for(let i=L-1;i>0&&chg(i)>0;i--)st++;}
+  else if(m.dayChg<0){st=1;for(let i=L-1;i>0&&chg(i)<0;i--)st++;}
+  // 近一年（约250交易日）高点与当前回撤
+  let mx=-1;for(let i=Math.max(0,L-250);i<=L;i++)if(NAV[i].y>mx)mx=NAV[i].y;
+  const dd=NAV[L].y/mx-1;
+  // 本自然月交易日统计
+  const dt=new Date(NAV[L].x),Y=dt.getFullYear(),Mo=dt.getMonth();
+  let mdays=0,mup=0,mfirst=L;
+  for(let i=L;i>=0;i--){const d2=new Date(NAV[i].x);if(d2.getFullYear()===Y&&d2.getMonth()===Mo){mdays++;if(chg(i)>0)mup++;mfirst=i;}else break;}
+  const mret=mfirst>0?NAV[L].y/NAV[mfirst-1].y-1:null;
+  const r1m=m.ranges&&m.ranges[1]?m.ranges[1].r:null;
+  if(up){
+    // ① 创新高（窗口从长到短）
+    const wins=[[250,'近一年'],[120,'近半年'],[60,'近三个月'],[20,'近一个月']];
+    for(const[w,lab]of wins){
+      if(L<w)continue;
+      let hx=-1;for(let i=L-w;i<L;i++)hx=Math.max(hx,NAV[i].y);
+      if(NAV[L].y>=hx){cands.push(['净值创出'+lab+'新高','今天的净值，是'+lab+'里最高的一天','安安静静，涨到了'+lab+'的高点']);break;}
+    }
+    if(!cands.length&&L>=10&&L<60){let hx=-1;for(let i=0;i<L;i++)hx=Math.max(hx,NAV[i].y);if(NAV[L].y>=hx)cands.push(['净值创下成立以来新高','今天的净值，是成立以来最高的']);}
+    // ② 连涨
+    if(st>=3)cands.push(['已经连着涨了'+st+'天','连涨'+st+'天，节奏还在','这是连续上涨的第'+st+'天']);
+    // ③ 近20个交易日最大单日涨幅
+    if(m.dayChg>=0.005&&L>=20){let big=true;for(let i=L-20;i<L;i++)if(chg(i)>m.dayChg){big=false;break;}
+      if(big)cands.push(['今天涨'+pm(m.dayChg)+'，是近一个月里最大的一天','近一个月最大的单日涨幅，就在今天']);}
+    // ④ 悄悄涨了（今日平淡但近一月可观）
+    if(r1m!=null&&r1m>=0.03&&m.dayChg<0.006)cands.push(['不知不觉，近一个月已经涨了'+pm(r1m),'没什么大动静，近一个月悄悄涨了'+pm(r1m)]);
+    // ⑤ 本月胜率
+    if(mdays>=8&&mup/mdays>=0.65)cands.push(['本月'+mdays+'个交易日，涨了'+mup+'天','这个月'+mdays+'天里，有'+mup+'天在涨']);
+  }else{
+    // ① 微跌（债基/低波日常）
+    if(Math.abs(m.dayChg)<0.001)cands.push(['今天只跌了'+pa(m.dayChg)+'，波动很小','微跌'+pa(m.dayChg)+'，几乎没什么感觉']);
+    // ② 本月累计仍为正
+    if(mret!=null&&mret>0.001)cands.push(['今天虽然回调，本月累计仍是'+pm(mret),'单日下跌，不改本月'+pm(mret)+'的累计涨幅']);
+    // ③ 近一月仍为正
+    if(r1m!=null&&r1m>0.005)cands.push(['今天回调，近一个月整体仍有'+pm(r1m),'把镜头拉远：近一个月仍是'+pm(r1m)]);
+    // ④ 距高点回撤（价格更便宜）
+    if(dd<=-0.05)cands.push(['净值比近一年高点低了'+pa(dd)+'，申购成本更低','现在的净值，比前期高点便宜'+pa(dd)]);
+    // ⑤ 连跌
+    if(st>=3)cands.push(['连跌'+st+'天，数据如实放在下面','已经回调'+st+'天，位置比之前便宜']);
+  }
+  const pool=[];cands.slice(0,2).forEach(c=>pool.push(...c));
+  return pool.length?pool:fallback;
+}
+function pickHook(m){
+  const day=Math.floor(m.tdate/86400000),seed=day+(parseInt(m.FCODE,10)||0);
+  const pool=hookPool(m);
+  const em=(m.dayChg>=0?['🌟','🔔','📣','✨']:['💡','🔍','☕','🌱'])[day%4];
+  return em+pool[seed%pool.length];
+}
 function genWenan(m){
   const icon=m.dayChg>=0?'📈':'📉';
   const sp=v=>(v>=0?'+':'')+(v*100).toFixed(2)+'%';
@@ -493,20 +564,34 @@ function computeModel(d,startStr,endStr){
   }
   const maxAbs=Math.max(...subs.map(x=>Math.abs(x.ann)),1e-9);
   const fee=fmtFee(d.rate,d.srcRate);
-  return {FNAME:d.FNAME,FCODE:d.FCODE,type:typeOf(d.FCODE),nav,dayChg,acnav,ranges,subs,maxAbs,
+  return {FNAME:d.FNAME,FCODE:d.FCODE,type:typeOf(d.FCODE),nav,dayChg,acnav,ranges,subs,maxAbs,NAVref:d.NAV,
           tdate:cur.x,buyFee:fee.buy,srcFee:fee.src,redeem:'',minD:fmtDate(NAV[0].x),maxD:fmtDate(NAV[L].x)};
 }
 
 function renderCard(m){
   const rangeHTML=m.ranges.map(r=>r.r==null
     ?`<div class="r"><div class="rl">${r.l}</div><div class="rv">--</div><div class="ra"></div></div>`
-    :`<div class="r"><div class="rl">${r.l}</div><div class="rv ${cls(r.r)}">${pct(r.r)}</div><div class="ra">年化 <span class="an ${cls(r.ann)}">${pctBig(r.ann)}</span></div></div>`).join('');
-  const rowsHTML=m.subs.length? m.subs.map(s=>{
+    :`<div class="r ${r.r>=0?'rb-up':'rb-down'}"><div class="rl">${r.l}</div><div class="rv ${cls(r.r)}">${pct(r.r)}</div><div class="ra">年化 <span class="an ${cls(r.ann)}">${pctBig(r.ann)}</span></div></div>`).join('');
+  let bi=-1,bv=-Infinity; if(m.subs.length>1)m.subs.forEach((s,i)=>{if(s.ann>bv){bv=s.ann;bi=i;}});
+  const rowsHTML=m.subs.length? m.subs.map((s,i)=>{
     const w=Math.max(6,Math.round(Math.abs(s.ann)/m.maxAbs*100));
-    return `<tr><td>${fmtDate(s.date)}</td><td>${s.sn.toFixed(4)}</td><td>${s.held}</td>
+    return `<tr${i===bi?' class="best"':''}><td>${fmtDate(s.date)}${i===bi?'<span class="besttag">最佳</span>':''}</td><td>${s.sn.toFixed(4)}</td><td>${s.held}</td>
       <td class="${cls(s.dchg)}">${pct(s.dchg)}</td><td class="strong ${cls(s.ret)}">${pct(s.ret)}</td>
       <td><span class="annual"><span class="v ${cls(s.ann)}">${pctBig(s.ann)}</span><span class="track2"><span class="fill ${bgcls(s.ann)}" style="width:${w}%"></span></span></span></td></tr>`;
   }).join('') : `<tr><td colspan="6" style="color:#9aa3b5">所选起始日期区间内暂无申购日，请把起始日期往前调</td></tr>`;
+  // 近三个月净值走势小图（canvas，导出PNG兼容）
+  const pts=(m.NAVref||[]).slice(-63); let sparkHTML='';
+  if(pts.length>=2){
+    let mn=Infinity,mnD=0,mxv=-Infinity,mxD=0;
+    pts.forEach(p=>{if(p.y<mn){mn=p.y;mnD=p.x}if(p.y>mxv){mxv=p.y;mxD=p.x}});
+    const sret=pts[pts.length-1].y/pts[0].y-1;
+    const lab=(m.NAVref.length>63)?'近三个月净值走势':'成立以来净值走势';
+    sparkHTML=`<div class="sec" style="padding-bottom:6px">
+      <div class="sec-t"><span class="bar"></span><b>${lab}</b><span>（${pts.length}个交易日，区间 <span style="font-weight:700;color:var(--${sret>=0?'up':'down'})">${pct(sret)}</span>）</span><span class="rule"></span></div>
+      <canvas id="sparkcv" width="1840" height="290" style="width:100%;height:145px;display:block"></canvas>
+      <div class="sparkfoot"><span>区间最低 ${mn.toFixed(4)}（${fmtDate(mnD)}）</span><span>区间最高 ${mxv.toFixed(4)}（${fmtDate(mxD)}）</span></div>
+    </div>`;
+  }
   $('#card').innerHTML=`
     <div class="topbar"></div>
     <div class="head">
@@ -518,6 +603,7 @@ function renderCard(m){
       <div class="kpi"><div class="lab">日涨幅</div><div class="chg ${bgcls(m.dayChg)}">${pct(m.dayChg)}</div></div>
       <div class="kpi"><div class="lab">累计净值</div><div class="big">${m.acnav.toFixed(4)}</div></div>
     </div>
+    ${sparkHTML}
     <div class="sec"><div class="sec-t"><span class="bar"></span><b>区间收益表现</b><span>（费前口径）</span><span class="rule"></span></div><div class="ranges">${rangeHTML}</div></div>
     <div class="sec">
       <div class="sec-t"><span class="bar"></span><b>每日申购客户收益测算</b><span>（按 ${fmtDate(m.tdate)} 净值 ${m.nav.toFixed(4)} 测算，共 ${m.subs.length} 个申购日）</span><span class="rule"></span></div>
@@ -525,8 +611,38 @@ function renderCard(m){
     </div>
     <div class="sec" style="padding-bottom:4px"><div class="sec-t"><span class="bar"></span><b>费率结构</b><span class="rule"></span></div></div>
     ${feeTablesHTML(m)}
-    <div class="foot">数据来源：天天基金网，截至 ${fmtDate(m.tdate)}；收益率为费前口径；年化收益率为模拟测算值（持有期收益率按 365 天折算，仅供参考），不代表未来表现。生成日期：${fmtDate(Date.now())}。</div>
+    <div class="foot">数据来源：天天基金网，截至 ${fmtDate(m.tdate)}；收益率为费前口径；年化收益率为模拟测算值（持有期收益率按 365 天折算，仅供参考），不代表未来表现。${bi>=0?'浅金色行＝区间内费前年化最高的申购日。':''}生成日期：${fmtDate(Date.now())}。</div>
     <div class="warn">⚠ 风险提示：基金有风险，投资需谨慎。本材料不构成投资建议，基金过往业绩不预示其未来表现。</div>`;
+  if(sparkHTML)drawSpark(pts);
+}
+// 净值走势小图：画在 2x 分辨率 canvas 上，html2canvas 导出依然清晰
+function drawSpark(pts){
+  const cv=document.getElementById('sparkcv');if(!cv)return;
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height,padL=16,padR=16,padT=34,padB=18;
+  let mn=Infinity,mx=-Infinity;pts.forEach(p=>{mn=Math.min(mn,p.y);mx=Math.max(mx,p.y);});
+  if(mx-mn<1e-6){mx+=0.001;mn-=0.001;}
+  const X=i=>padL+(W-padL-padR)*i/(pts.length-1);
+  const Y=v=>padT+(H-padT-padB)*(1-(v-mn)/(mx-mn));
+  const upTrend=pts[pts.length-1].y>=pts[0].y,col=upTrend?'#c62f2f':'#2f9e6b';
+  ctx.clearRect(0,0,W,H);
+  // 虚线网格
+  ctx.strokeStyle='#edf0f5';ctx.lineWidth=2;ctx.setLineDash([2,8]);
+  for(let g=0;g<3;g++){const gy=padT+(H-padT-padB)*g/2;ctx.beginPath();ctx.moveTo(padL,gy);ctx.lineTo(W-padR,gy);ctx.stroke();}
+  ctx.setLineDash([]);
+  // 面积渐变
+  const grad=ctx.createLinearGradient(0,padT,0,H-padB);
+  grad.addColorStop(0,upTrend?'rgba(198,47,47,.16)':'rgba(47,158,107,.16)');grad.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.beginPath();ctx.moveTo(X(0),H-padB);
+  pts.forEach((p,i)=>ctx.lineTo(X(i),Y(p.y)));
+  ctx.lineTo(X(pts.length-1),H-padB);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+  // 净值线
+  ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(X(i),Y(p.y)):ctx.moveTo(X(i),Y(p.y)));
+  ctx.strokeStyle=col;ctx.lineWidth=4;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
+  // 最新点 + 净值标签
+  const ex=X(pts.length-1),ey=Y(pts[pts.length-1].y);
+  ctx.beginPath();ctx.arc(ex,ey,9,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.lineWidth=4;ctx.strokeStyle=col;ctx.stroke();
+  ctx.font='700 26px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif';ctx.fillStyle=col;ctx.textAlign='right';
+  ctx.fillText(pts[pts.length-1].y.toFixed(4),ex-14,Math.max(30,ey-16));
 }
 
 function setStatus(t,c){const el=$('#status');el.textContent=t;el.className='status '+(c||'');}
